@@ -9,6 +9,7 @@ const logger = require('./config/logger');
 const itemsRouter = require('./routes/items');
 const backupRouter = require('./routes/backup');
 const erpRouter = require('./routes/erp');
+const docsRouter = require('./routes/docs');
 const { getBackupHistory } = require('./services/backupService');
 
 const app = express();
@@ -89,15 +90,22 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/items', itemsRouter);
 app.use('/api/erp', erpRouter);
 app.use('/api/backup', backupRouter);
+app.use('/docs', docsRouter);
+app.use('/api/docs', docsRouter);
 
 // Root greeting
 app.get('/', (req, res) => {
   res.json({
-    message: '🚀 3-Tier Demo Application Backend API is running!',
+    message: '🚀 Akij ERP Cloud & 3-Tier Enterprise Backend API is running!',
     documentation: {
+      swaggerUi: 'GET /docs or /api/docs',
+      openApiJson: 'GET /docs/swagger.json',
       health: 'GET /api/health',
+      erpDashboard: 'GET /api/erp/dashboard',
+      orders: 'GET /api/erp/orders',
+      customers: 'GET /api/erp/customers',
+      suppliers: 'GET /api/erp/suppliers',
       items: 'GET /api/items',
-      createItem: 'POST /api/items',
       flushCache: 'POST /api/items/cache/flush'
     }
   });
