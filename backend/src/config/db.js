@@ -50,6 +50,8 @@ let mockOrders = [
 let mockNextItemId = 7;
 let mockNextOrderId = 5;
 
+const { runInitScripts } = require('../scripts/initDb');
+
 async function initOraclePool() {
   try {
     console.log(`[Oracle DB] Attempting connection to: ${dbConfig.connectString} as user: ${dbConfig.user}...`);
@@ -57,6 +59,7 @@ async function initOraclePool() {
     isConnected = true;
     lastError = null;
     console.log('[Oracle DB] Connected successfully to Oracle Database Pool! 🗄️');
+    runInitScripts().catch(e => console.warn('[Oracle DB] Schema auto-init notice:', e.message));
   } catch (err) {
     isConnected = false;
     lastError = err.message;
@@ -73,6 +76,7 @@ setInterval(async () => {
       isConnected = true;
       lastError = null;
       console.log('[Oracle DB] Auto-connected to Oracle Database Pool! 🗄️');
+      runInitScripts().catch(e => console.warn('[Oracle DB] Schema auto-init notice:', e.message));
     } catch (err) {
       lastError = err.message;
     }
