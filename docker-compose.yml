@@ -30,6 +30,8 @@ services:
     restart: unless-stopped
     ports:
       - "5000:5000"   # Direct port also accessible
+    env_file:
+      - ./backend/.env
     environment:
       - PORT=5000
       - NODE_ENV=production
@@ -39,9 +41,8 @@ services:
       - REDIS_URL=redis://redis:6379
       - CACHE_TTL_SECONDS=60
       - SEQ_URL=http://seq:80
-      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
-      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-oracle-backups}
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - AZURE_STORAGE_CONTAINER_NAME=oracle-backups
+      - BACKUP_RETENTION_DAYS=7
     depends_on:
       redis:
         condition: service_healthy
@@ -125,15 +126,16 @@ services:
     container_name: poc-db-backup
     restart: unless-stopped
     command: ["node", "src/scripts/backupCron.js"]
+    env_file:
+      - ./backend/.env
     environment:
       - ORACLE_USER=poc_user
       - ORACLE_PASSWORD=poc_password
       - ORACLE_CONNECT_STRING=oracle-db:1521/FREEPDB1
       - SEQ_URL=http://seq:80
-      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
-      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-oracle-backups}
+      - AZURE_STORAGE_CONTAINER_NAME=oracle-backups
       - BACKUP_CRON_SCHEDULE=0 */12 * * *
-      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-7}
+      - BACKUP_RETENTION_DAYS=7
     depends_on:
       - oracle-db
       - seq
