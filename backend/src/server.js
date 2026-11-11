@@ -8,6 +8,7 @@ const { initRedis, getStatus: getRedisStatus } = require('./config/redis');
 const logger = require('./config/logger');
 const itemsRouter = require('./routes/items');
 const backupRouter = require('./routes/backup');
+const erpRouter = require('./routes/erp');
 const { getBackupHistory } = require('./services/backupService');
 
 const app = express();
@@ -86,6 +87,7 @@ app.get('/api/health', async (req, res) => {
 
 // Mount Routes
 app.use('/api/items', itemsRouter);
+app.use('/api/erp', erpRouter);
 app.use('/api/backup', backupRouter);
 
 // Root greeting

@@ -1,23 +1,39 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import ArchitectureBar from './components/ArchitectureBar';
-import ObservabilityBar from './components/ObservabilityBar';
-import StatsCards from './components/StatsCards';
+import ErpSidebar from './components/erp/ErpSidebar';
+import ErpHeader from './components/erp/ErpHeader';
+import ErpDashboard from './components/erp/ErpDashboard';
+import OrdersModule from './components/erp/OrdersModule';
+import SuppliersModule from './components/erp/SuppliersModule';
+import CustomersModule from './components/erp/CustomersModule';
+import SystemAdminModule from './components/erp/SystemAdminModule';
 import ItemTable from './components/ItemTable';
 import ItemModal from './components/ItemModal';
+import NewOrderModal from './components/erp/NewOrderModal';
+import NewCustomerModal from './components/erp/NewCustomerModal';
+import NewSupplierModal from './components/erp/NewSupplierModal';
 import AzureConfigModal from './components/AzureConfigModal';
-import { Database, Server, Globe, ExternalLink } from 'lucide-react';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(() => {
     return localStorage.getItem('AZURE_API_URL') || import.meta.env.VITE_API_URL || 'http://localhost:5000';
   });
 
+  const [activeTab, setActiveTab] = useState('dashboard');
+
+  // ERP Datasets
+  const [dashboardData, setDashboardData] = useState(null);
   const [items, setItems] = useState([]);
+  const [orders, setOrders] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  // Filters for items
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('');
+
+  // Observability & System state
   const [health, setHealth] = useState(null);
-  const [lastQueryInfo, setLastQueryInfo] = useState(null);
   const [isFlushing, setIsFlushing] = useState(false);
   const [isBackingUp, setIsBackingUp] = useState(false);
   const [lastBackupResult, setLastBackupResult] = useState(null);
@@ -25,9 +41,12 @@ export default function App() {
   // Modals
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [isOrderModalOpen, setIsOrderModalOpen] = useState(false);
+  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false);
+  const [isSupplierModalOpen, setIsSupplierModalOpen] = useState(false);
   const [isConfigModalOpen, setIsConfigModalOpen] = useState(false);
 
-  // Fetch Health & Architecture Status
+  // 1. Fetch Health
   const fetchHealth = useCallback(async () => {
     try {
       const res = await fetch(`${apiUrl}/api/health`);
@@ -36,11 +55,24 @@ export default function App() {
         setHealth(data);
       }
     } catch (e) {
-      console.warn('Backend API health ping failed:', e.message);
+      console.warn('API health check deferred:', e.message);
     }
   }, [apiUrl]);
 
-  // Fetch Items
+  // 2. Fetch ERP Dashboard
+  const fetchDashboard = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/dashboard`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setDashboardData(data.data);
+      }
+    } catch (e) {
+      console.warn('Dashboard fetch deferred:', e.message);
+    }
+  }, [apiUrl]);
+
+  // 3. Fetch Items
   const fetchItems = useCallback(async () => {
     try {
       setLoading(true);
@@ -49,71 +81,158 @@ export default function App() {
       if (categoryFilter) params.append('category', categoryFilter);
 
       const res = await fetch(`${apiUrl}/api/items?${params.toString()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
-      const result = await res.json();
-      if (result.success) {
-        setItems(result.data || []);
-        setLastQueryInfo({
-          source: result.source,
-          executionTimeMs: result.executionTimeMs,
-          count: result.count,
-          timestamp: new Date().toLocaleTimeString(),
-        });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setItems(data.data || []);
       }
-    } catch (err) {
-      console.error('Failed to load items:', err);
+    } catch (e) {
+      console.warn('Items fetch deferred:', e.message);
     } finally {
       setLoading(false);
     }
   }, [apiUrl, searchQuery, categoryFilter]);
 
-  // Initial mount & poller
-  useEffect(() => {
+  // 4. Fetch Orders
+  const fetchOrders = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/orders`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setOrders(data.data || []);
+      }
+    } catch (e) {
+      console.warn('Orders fetch deferred:', e.message);
+    }
+  }, [apiUrl]);
+
+  // 5. Fetch Customers
+  const fetchCustomers = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/customers`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setCustomers(data.data || []);
+      }
+    } catch (e) {
+      console.warn('Customers fetch deferred:', e.message);
+    }
+  }, [apiUrl]);
+
+  // 6. Fetch Suppliers
+  const fetchSuppliers = useCallback(async () => {
+    try {
+      const res = await fetch(`${apiUrl}/api/erp/suppliers`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) setSuppliers(data.data || []);
+      }
+    } catch (e) {
+      console.warn('Suppliers fetch deferred:', e.message);
+    }
+  }, [apiUrl]);
+
+  // Refresh all ERP datasets
+  const refreshAll = useCallback(() => {
     fetchHealth();
+    fetchDashboard();
     fetchItems();
-    const interval = setInterval(fetchHealth, 15000);
+    fetchOrders();
+    fetchCustomers();
+    fetchSuppliers();
+  }, [fetchHealth, fetchDashboard, fetchItems, fetchOrders, fetchCustomers, fetchSuppliers]);
+
+  useEffect(() => {
+    refreshAll();
+    const interval = setInterval(refreshAll, 15000);
     return () => clearInterval(interval);
-  }, [fetchHealth, fetchItems]);
+  }, [refreshAll]);
+
+  // Handle Quick Create Actions
+  const handleQuickAction = (type) => {
+    if (type === 'order') setIsOrderModalOpen(true);
+    if (type === 'item') {
+      setEditingItem(null);
+      setIsItemModalOpen(true);
+    }
+    if (type === 'customer') setIsCustomerModalOpen(true);
+    if (type === 'supplier') setIsSupplierModalOpen(true);
+  };
+
+  // Create or Update Item
+  const handleSaveItem = async (formData) => {
+    const isEdit = !!editingItem;
+    const url = isEdit ? `${apiUrl}/api/items/${editingItem.id}` : `${apiUrl}/api/items`;
+    const res = await fetch(url, {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+    if (!res.ok) throw new Error('Failed to save item');
+    refreshAll();
+  };
+
+  // Delete Item
+  const handleDeleteItem = async (id) => {
+    if (!window.confirm(`Are you sure you want to delete SKU item #${id}?`)) return;
+    await fetch(`${apiUrl}/api/items/${id}`, { method: 'DELETE' });
+    refreshAll();
+  };
+
+  // Create Sales Order
+  const handleSaveOrder = async (orderData) => {
+    const res = await fetch(`${apiUrl}/api/erp/orders`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(orderData),
+    });
+    if (!res.ok) throw new Error('Failed to create sales order');
+    refreshAll();
+  };
+
+  // Update Sales Order Status
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    await fetch(`${apiUrl}/api/erp/orders/${orderId}/status`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: newStatus }),
+    });
+    refreshAll();
+  };
+
+  // Create Customer
+  const handleSaveCustomer = async (custData) => {
+    const res = await fetch(`${apiUrl}/api/erp/customers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(custData),
+    });
+    if (!res.ok) throw new Error('Failed to register customer');
+    refreshAll();
+  };
+
+  // Create Supplier
+  const handleSaveSupplier = async (suppData) => {
+    const res = await fetch(`${apiUrl}/api/erp/suppliers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(suppData),
+    });
+    if (!res.ok) throw new Error('Failed to register supplier');
+    refreshAll();
+  };
 
   // Flush Redis Cache
   const handleFlushCache = async () => {
     try {
       setIsFlushing(true);
-      const res = await fetch(`${apiUrl}/api/items/cache/flush`, { method: 'POST' });
-      if (res.ok) {
-        // Automatically fetch items again so user sees Oracle DB query latency!
-        await fetchItems();
-      }
-    } catch (err) {
-      alert(`Flush cache failed: ${err.message}`);
+      await fetch(`${apiUrl}/api/items/cache/flush`, { method: 'POST' });
+      await fetchItems();
     } finally {
       setIsFlushing(false);
     }
   };
 
-  // Save Item (Create or Update)
-  const handleSaveItem = async (formData) => {
-    const isEdit = !!editingItem;
-    const url = isEdit ? `${apiUrl}/api/items/${editingItem.id}` : `${apiUrl}/api/items`;
-    const method = isEdit ? 'PUT' : 'POST';
-
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-
-    if (!res.ok) {
-      const errData = await res.json().catch(() => ({}));
-      throw new Error(errData.message || 'Error saving item');
-    }
-
-    await fetchItems();
-    await fetchHealth();
-  };
-
-  // Trigger On-Demand DB Backup to Azure Blob
+  // Trigger Azure Blob Backup
   const handleTriggerBackup = async () => {
     try {
       setIsBackingUp(true);
@@ -122,126 +241,122 @@ export default function App() {
       if (res.ok && data.success) {
         setLastBackupResult(data.data);
         await fetchHealth();
-      } else {
-        alert(`Backup warning: ${data.message || 'Operation failed'}`);
       }
-    } catch (err) {
-      alert(`Backup error: ${err.message}`);
     } finally {
       setIsBackingUp(false);
     }
   };
 
-  // Delete Item
-  const handleDeleteItem = async (id) => {
-    if (!window.confirm(`Are you sure you want to delete item #${id}?`)) return;
-
-    try {
-      const res = await fetch(`${apiUrl}/api/items/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      await fetchItems();
-    } catch (err) {
-      alert(`Failed to delete item: ${err.message}`);
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'dashboard': return 'Executive Operations Dashboard';
+      case 'inventory': return 'Inventory & Product Master';
+      case 'orders': return 'Sales Orders & Dispatch';
+      case 'suppliers': return 'Procurement & Vendor Directory';
+      case 'customers': return 'Client & Customer Management';
+      case 'system': return 'Cloud & System Administration';
+      default: return 'Enterprise Resource Planning';
     }
   };
 
-  // Save API URL
-  const handleSaveApiUrl = (newUrl) => {
-    setApiUrl(newUrl);
-    localStorage.setItem('AZURE_API_URL', newUrl);
-  };
+  const lowStockCount = dashboardData?.summary?.lowStockCount || 0;
+  const pendingOrdersCount = dashboardData?.summary?.pendingOrders || 0;
 
   return (
-    <div className="min-h-screen flex flex-col bg-slate-50">
-      {/* Top Enterprise Navigation */}
-      <header className="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center font-bold text-white shadow-md shadow-blue-500/20">
-              3T
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-base font-bold tracking-tight">Enterprise 3-Tier Application</h1>
-                <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/20 text-blue-300 border border-blue-400/30">
-                  PoC
-                </span>
-              </div>
-              <p className="text-xs text-slate-400">
-                Azure Static Web Apps • Node.js Backend • Oracle Database 23ai • Redis Cache • Seq Logs
-              </p>
-            </div>
-          </div>
+    <div className="flex h-screen bg-slate-100 overflow-hidden font-sans text-slate-800">
+      {/* Enterprise Left Sidebar */}
+      <ErpSidebar
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        lowStockCount={lowStockCount}
+        pendingOrdersCount={pendingOrdersCount}
+      />
 
-          <div className="flex items-center gap-4 text-xs">
-            <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800/80 border border-slate-700 font-mono text-slate-300">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              API: {apiUrl}
-            </div>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Architecture Status & Performance Monitor */}
-        <ArchitectureBar
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        {/* Top Header */}
+        <ErpHeader
+          activeTabTitle={getTabTitle()}
+          onQuickAction={handleQuickAction}
+          lowStockCount={lowStockCount}
           health={health}
-          lastQueryInfo={lastQueryInfo}
-          onFlushCache={handleFlushCache}
-          isFlushing={isFlushing}
-          onOpenConfig={() => setIsConfigModalOpen(true)}
-          apiUrl={apiUrl}
+          onOpenSettings={() => setIsConfigModalOpen(true)}
         />
 
-        {/* Observability: Seq Logging & Azure Blob DB Backup */}
-        <ObservabilityBar
-          health={health}
-          apiUrl={apiUrl}
-          onTriggerBackup={handleTriggerBackup}
-          isBackingUp={isBackingUp}
-          lastBackupResult={lastBackupResult}
-        />
+        {/* Dynamic Body */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {activeTab === 'dashboard' && (
+              <ErpDashboard
+                dashboardData={dashboardData}
+                onNavigate={setActiveTab}
+                onQuickAction={handleQuickAction}
+                onUpdateOrderStatus={handleUpdateOrderStatus}
+              />
+            )}
 
-        {/* High-level KPI Cards */}
-        <StatsCards items={items} />
+            {activeTab === 'inventory' && (
+              <ItemTable
+                items={items}
+                loading={loading}
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                categoryFilter={categoryFilter}
+                onCategoryFilterChange={setCategoryFilter}
+                onRefresh={fetchItems}
+                onAddNew={() => {
+                  setEditingItem(null);
+                  setIsItemModalOpen(true);
+                }}
+                onEdit={(item) => {
+                  setEditingItem(item);
+                  setIsItemModalOpen(true);
+                }}
+                onDelete={handleDeleteItem}
+              />
+            )}
 
-        {/* Data Table */}
-        <ItemTable
-          items={items}
-          loading={loading}
-          searchQuery={searchQuery}
-          onSearchChange={setSearchQuery}
-          categoryFilter={categoryFilter}
-          onCategoryFilterChange={setCategoryFilter}
-          onRefresh={fetchItems}
-          onAddNew={() => {
-            setEditingItem(null);
-            setIsItemModalOpen(true);
-          }}
-          onEdit={(item) => {
-            setEditingItem(item);
-            setIsItemModalOpen(true);
-          }}
-          onDelete={handleDeleteItem}
-        />
-      </main>
+            {activeTab === 'orders' && (
+              <OrdersModule
+                orders={orders}
+                customers={customers}
+                loading={loading}
+                onAddNewOrder={() => setIsOrderModalOpen(true)}
+                onUpdateStatus={handleUpdateOrderStatus}
+              />
+            )}
 
-      {/* Footer */}
-      <footer className="bg-white border-t border-slate-200 py-4 text-center text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-          <span>Demo 3-Tier Application Architecture • Ready for Azure Deployment</span>
-          <div className="flex items-center gap-3">
-            <span>Frontend: React 18 / SWA</span>
-            <span>•</span>
-            <span>Backend: Express / Docker</span>
-            <span>•</span>
-            <span>Database: Oracle DB Free</span>
+            {activeTab === 'suppliers' && (
+              <SuppliersModule
+                suppliers={suppliers}
+                onAddNewSupplier={() => setIsSupplierModalOpen(true)}
+              />
+            )}
+
+            {activeTab === 'customers' && (
+              <CustomersModule
+                customers={customers}
+                onAddNewCustomer={() => setIsCustomerModalOpen(true)}
+              />
+            )}
+
+            {activeTab === 'system' && (
+              <SystemAdminModule
+                health={health}
+                apiUrl={apiUrl}
+                onFlushCache={handleFlushCache}
+                isFlushing={isFlushing}
+                onTriggerBackup={handleTriggerBackup}
+                isBackingUp={isBackingUp}
+                lastBackupResult={lastBackupResult}
+                onOpenConfig={() => setIsConfigModalOpen(true)}
+              />
+            )}
           </div>
-        </div>
-      </footer>
+        </main>
+      </div>
 
-      {/* Item Modal (Create/Edit) */}
+      {/* Modals */}
       <ItemModal
         isOpen={isItemModalOpen}
         onClose={() => {
@@ -252,12 +367,33 @@ export default function App() {
         item={editingItem}
       />
 
-      {/* Azure VM Endpoint Config Modal */}
+      <NewOrderModal
+        isOpen={isOrderModalOpen}
+        onClose={() => setIsOrderModalOpen(false)}
+        onSave={handleSaveOrder}
+        customers={customers}
+      />
+
+      <NewCustomerModal
+        isOpen={isCustomerModalOpen}
+        onClose={() => setIsCustomerModalOpen(false)}
+        onSave={handleSaveCustomer}
+      />
+
+      <NewSupplierModal
+        isOpen={isSupplierModalOpen}
+        onClose={() => setIsSupplierModalOpen(false)}
+        onSave={handleSaveSupplier}
+      />
+
       <AzureConfigModal
         isOpen={isConfigModalOpen}
         onClose={() => setIsConfigModalOpen(false)}
         currentUrl={apiUrl}
-        onSaveUrl={handleSaveApiUrl}
+        onSaveUrl={(url) => {
+          setApiUrl(url);
+          localStorage.setItem('AZURE_API_URL', url);
+        }}
       />
     </div>
   );
