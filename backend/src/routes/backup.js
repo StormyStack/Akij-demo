@@ -17,9 +17,12 @@ router.get('/history', (req, res) => {
 router.post('/trigger', async (req, res) => {
   try {
     const result = await performOracleBackup('web_api_manual_trigger');
+    const isCloudSuccess = result.azureUpload && result.azureUpload.success;
     res.json({
       success: true,
-      message: 'Oracle DB backup completed successfully and uploaded to Azure Blob Storage!',
+      message: isCloudSuccess
+        ? 'Oracle DB backup completed successfully and uploaded to Azure Blob Storage!'
+        : `Database backup archived locally. (${result.azureUpload?.error || result.azureUpload?.note})`,
       data: result,
     });
   } catch (err) {

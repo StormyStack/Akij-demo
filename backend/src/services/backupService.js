@@ -196,7 +196,8 @@ async function performOracleBackup(triggeredBy = 'cronjob') {
         const blobServiceClient = BlobServiceClient.fromConnectionString(AZURE_STORAGE_CONNECTION_STRING);
         const containerClient = blobServiceClient.getContainerClient(AZURE_STORAGE_CONTAINER_NAME);
 
-        await containerClient.createIfNotExists({ access: 'blob' });
+        // Create container with private access (Azure accounts disallow anonymous public blob access by default)
+        await containerClient.createIfNotExists();
 
         const blockBlobClient = containerClient.getBlockBlobClient(gzFilename);
         

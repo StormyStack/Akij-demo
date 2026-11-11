@@ -237,23 +237,41 @@ export default function SystemAdminModule({
 
       {/* Backup Confirmation Box */}
       {lastBackupResult && (
-        <div className="p-4 bg-sky-50 border border-sky-200 rounded-xl text-xs text-sky-900 flex items-start justify-between gap-3 animate-fade-in">
+        <div className={`p-4 border rounded-xl text-xs flex items-start justify-between gap-3 animate-fade-in ${
+          lastBackupResult.azureUpload?.success
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            : 'bg-amber-50 border-amber-200 text-amber-900'
+        }`}>
           <div className="flex items-start gap-2.5">
-            <CheckCircle2 className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
+            {lastBackupResult.azureUpload?.success ? (
+              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            ) : (
+              <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            )}
             <div>
-              <div className="font-bold">Database Backup & Retention Policy Completed Successfully!</div>
-              <div className="text-sky-700 mt-0.5">
-                File: <code className="font-mono bg-sky-100/60 px-1 py-0.5 rounded">{lastBackupResult.filename}</code> ({lastBackupResult.sizeKb} KB)
-                {lastBackupResult.azureUpload?.container && (
-                  <span> &bull; Streamed to Azure Storage Container: <strong>{lastBackupResult.azureUpload.container}</strong></span>
+              <div className="font-bold">
+                {lastBackupResult.azureUpload?.success
+                  ? 'Database Backup Streamed to Azure Blob Storage & Retention Applied!'
+                  : 'Database Backup Saved Locally (Azure Blob Upload Incomplete)'}
+              </div>
+              <div className={`mt-0.5 ${lastBackupResult.azureUpload?.success ? 'text-emerald-700' : 'text-amber-800'}`}>
+                File: <code className="font-mono bg-white/70 px-1 py-0.5 rounded border border-slate-200">{lastBackupResult.filename}</code> ({lastBackupResult.sizeKb} KB)
+                {lastBackupResult.azureUpload?.success ? (
+                  <span> &bull; Uploaded to Azure Blob Container: <strong>{lastBackupResult.azureUpload.container}</strong></span>
+                ) : (
+                  <div className="mt-1 font-mono text-[11px] bg-amber-100/60 p-1.5 rounded text-amber-900">
+                    {lastBackupResult.azureUpload?.error || lastBackupResult.azureUpload?.note}
+                  </div>
                 )}
                 {lastBackupResult.retentionPolicy && (
-                  <span> &bull; Retention applied: Purged {lastBackupResult.retentionPolicy.localPurged} local file(s), {lastBackupResult.retentionPolicy.cloudPurged} cloud blob(s).</span>
+                  <div className="mt-1 text-[11px] opacity-80">
+                    Retention policy: {lastBackupResult.retentionPolicy.retentionDays}-day policy enforced &bull; Purged {lastBackupResult.retentionPolicy.localPurged} local file(s), {lastBackupResult.retentionPolicy.cloudPurged} cloud blob(s).
+                  </div>
                 )}
               </div>
             </div>
           </div>
-          <span className="text-[11px] font-mono text-sky-600">
+          <span className="text-[11px] font-mono opacity-60">
             {new Date(lastBackupResult.timestamp).toLocaleTimeString()}
           </span>
         </div>
