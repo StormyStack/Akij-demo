@@ -24,9 +24,14 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
         setTestResult({ success: false, message: `Server returned HTTP ${res.status}` });
       }
     } catch (err) {
+      const isMixedContent = window.location.protocol === 'https:' && cleanUrl.startsWith('http://');
+      const guidance = isMixedContent
+        ? 'Browser blocked Mixed Content (HTTPS website calling HTTP backend). Click the lock/shield icon on your browser address bar -> Site settings -> Allow "Insecure content", then refresh.'
+        : `Connection failed: ${err.message}. Make sure your Azure VM Security Group allows inbound port 5000 or 80.`;
+
       setTestResult({
         success: false,
-        message: `Connection failed: ${err.message}. Make sure your Azure VM Security Group allows inbound port 5000.`
+        message: guidance
       });
     } finally {
       setTesting(false);
