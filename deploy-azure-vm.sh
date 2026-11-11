@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
 # ==========================================================
-# 3-Tier Enterprise PoC - Azure VM Provisioning Script
-# This script sets up Docker, Docker Compose, and starts
-# the Oracle DB + Redis + Seq + Backend API + DB Backup Cron
-# on an Ubuntu/Debian Azure VM.
+# Akij Enterprise ERP - Azure VM Provisioning Script
+# Architecture:
+#   Frontend (Azure SWA) -> Nginx -> Backend API
+#   Backend -> Oracle DB 23ai + Redis + Seq Logs
+#   DB Backup (12hr Cron + Retention Policy) -> Azure Blob Storage
 # ==========================================================
 
 set -e
 
 echo "=========================================================="
-echo "  Deploying 3-Tier Stack on Azure VM (Docker)"
-echo "  Components: Oracle DB 23ai + Redis + Seq Logs + Backend + DB Backup Cron"
+echo "  Deploying Akij ERP Enterprise Stack on Azure VM (Docker)"
+echo "  Components: Nginx + Backend API + Oracle DB + Redis + Seq + Backup Cron (12h)"
 echo "=========================================================="
 
 # 1. Update and install prerequisites
@@ -19,7 +20,7 @@ sudo apt-get install -y ca-certificates curl gnupg lsb-release
 
 # 2. Install Docker if not present
 if ! command -v docker &> /dev/null; then
-    echo "[1/3] Installing Docker..."
+    echo "[1/3] Installing Docker Engine & Compose plugin..."
     sudo mkdir -p /etc/apt/keyrings
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
     echo \
@@ -34,7 +35,7 @@ else
 fi
 
 # 3. Pull images and launch Docker Compose stack
-echo "[2/3] Building and starting all containers (Oracle DB, Redis, Seq, Backend, DB Backup)..."
+echo "[2/3] Building and starting all 6 containers..."
 sudo docker compose up -d --build
 
 echo "[3/3] Checking container status..."
@@ -43,17 +44,19 @@ sudo docker compose ps
 VM_IP=$(curl -s ifconfig.me || echo "AZURE_VM_PUBLIC_IP")
 
 echo "=========================================================="
-echo "  Deployment Complete! 🚀"
-echo "  - Backend REST API: http://${VM_IP}:5000"
-echo "  - Health Check:     http://${VM_IP}:5000/api/health"
-echo "  - Seq Logs Web UI:  http://${VM_IP}:5341"
+echo "  Enterprise Deployment Complete! 🚀"
+echo "  - Nginx Gateway:    http://${VM_IP} (Port 80)"
+echo "  - Backend REST API: http://${VM_IP}/api/health"
+echo "  - Direct API Port:  http://${VM_IP}:5000/api/health"
+echo "  - Seq Log Server:   http://${VM_IP}:5341"
 echo "  - Oracle DB Port:   1521 (FREEPDB1)"
 echo "  - Redis Port:       6379"
-echo "  - DB Backup Cron:   Every 1 Hour (0 * * * *) to Azure Blob"
+echo "  - DB Backup Cron:   Every 12 Hours with Retention Policy (Azure Blob)"
 echo "=========================================================="
 echo "IMPORTANT: In Azure Portal, ensure your VM Network Security Group (NSG)"
 echo "Inbound Security Rules allow:"
-echo "  - Port 5000 (Backend API)"
+echo "  - Port 80   (Nginx Ingress - Recommended for SWA)"
+echo "  - Port 5000 (Backend API Direct)"
 echo "  - Port 5341 (Seq Logging Web Dashboard)"
 echo "  - Port 1521 (Optional: Direct Oracle DB access)"
 echo "=========================================================="

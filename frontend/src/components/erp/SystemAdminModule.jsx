@@ -10,7 +10,9 @@ import {
   Settings, 
   Layers, 
   Globe,
-  HardDrive
+  HardDrive,
+  ShieldCheck,
+  Clock
 } from 'lucide-react';
 
 export default function SystemAdminModule({
@@ -50,7 +52,7 @@ export default function SystemAdminModule({
             System Administration & Observability Hub
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Real-time status for Oracle DB, Redis caching, Seq structured telemetry, and Azure Blob Storage automated backups
+            Real-time status for Nginx Ingress, Oracle DB, Redis caching, Seq structured telemetry, and 12-Hour Azure Blob Storage automated backups
           </p>
         </div>
 
@@ -75,9 +77,9 @@ export default function SystemAdminModule({
         </div>
       </div>
 
-      {/* 4 Core Infrastructure Nodes */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Tier 1: Frontend */}
+      {/* 5 Core Infrastructure Nodes (Matching Architecture Diagram) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        {/* Tier 1: Frontend (Amplify -> Azure SWA) */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 rounded-lg bg-blue-50 text-blue-600">
@@ -88,11 +90,26 @@ export default function SystemAdminModule({
             </span>
           </div>
           <div className="font-bold text-slate-900 text-xs">Azure Static Web Apps</div>
-          <div className="text-[11px] text-slate-500 mt-1">Presentation Tier (React 18 / Vite)</div>
+          <div className="text-[11px] text-slate-500 mt-1">Frontend Client (React / Vite)</div>
           <div className="text-[10px] text-slate-400 mt-2 font-mono">Edge CDN Deployed</div>
         </div>
 
-        {/* Tier 2: Backend */}
+        {/* Ingress: Nginx Reverse Proxy */}
+        <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
+          <div className="flex items-center justify-between mb-2">
+            <div className="p-2 rounded-lg bg-emerald-50 text-emerald-600">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+              <CheckCircle2 className="w-3 h-3" /> Port 80
+            </span>
+          </div>
+          <div className="font-bold text-slate-900 text-xs">Nginx Ingress Proxy</div>
+          <div className="text-[11px] text-slate-500 mt-1">Reverse Proxy Gateway</div>
+          <div className="text-[10px] text-slate-400 mt-2 font-mono">Routes /api & /seq</div>
+        </div>
+
+        {/* Tier 2: Backend API */}
         <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center justify-between mb-2">
             <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
@@ -102,8 +119,8 @@ export default function SystemAdminModule({
               <CheckCircle2 className="w-3 h-3" /> Port 5000
             </span>
           </div>
-          <div className="font-bold text-slate-900 text-xs">Node.js Express REST API</div>
-          <div className="text-[11px] text-slate-500 mt-1">Application Tier (Azure VM Docker)</div>
+          <div className="font-bold text-slate-900 text-xs">Node.js Express API</div>
+          <div className="text-[11px] text-slate-500 mt-1">Application Tier (Docker VM)</div>
           <div className="text-[10px] text-slate-400 mt-2 font-mono truncate">{apiUrl}</div>
         </div>
 
@@ -117,8 +134,8 @@ export default function SystemAdminModule({
               <CheckCircle2 className="w-3 h-3" /> Port 1521
             </span>
           </div>
-          <div className="font-bold text-slate-900 text-xs">Oracle Database 23ai Free</div>
-          <div className="text-[11px] text-slate-500 mt-1">Data Tier (PDB: FREEPDB1)</div>
+          <div className="font-bold text-slate-900 text-xs">Oracle Database 23ai</div>
+          <div className="text-[11px] text-slate-500 mt-1">Data Tier (FREEPDB1)</div>
           <div className="text-[10px] text-slate-400 mt-2 font-mono">User: poc_user</div>
         </div>
 
@@ -132,9 +149,9 @@ export default function SystemAdminModule({
               <CheckCircle2 className="w-3 h-3" /> Port 6379
             </span>
           </div>
-          <div className="font-bold text-slate-900 text-xs">Redis 7 In-Memory Cache</div>
-          <div className="text-[11px] text-slate-500 mt-1">High-Speed Query Cache (60s TTL)</div>
-          <div className="text-[10px] text-slate-400 mt-2 font-mono">Active Cache Keys: {redisStatus?.keysCount || 0}</div>
+          <div className="font-bold text-slate-900 text-xs">Redis 7 Cache</div>
+          <div className="text-[11px] text-slate-500 mt-1">In-Memory Query Cache</div>
+          <div className="text-[10px] text-slate-400 mt-2 font-mono">Keys: {redisStatus?.keysCount || 0}</div>
         </div>
       </div>
 
@@ -177,7 +194,7 @@ export default function SystemAdminModule({
           </div>
         </div>
 
-        {/* Azure Blob Storage DB Backup Cron */}
+        {/* Azure Blob Storage DB Backup with Retention Policy */}
         <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-xs flex flex-col justify-between">
           <div>
             <div className="flex items-center justify-between mb-3">
@@ -186,19 +203,19 @@ export default function SystemAdminModule({
                   <HardDrive className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-bold text-slate-900">Oracle DB Backup to Azure Blob</h3>
-                  <p className="text-xs text-slate-500">Scheduled hourly cronjob (0 * * * *) with Gzip compression</p>
+                  <h3 className="text-sm font-bold text-slate-900">DB Backup with Retention Policy</h3>
+                  <p className="text-xs text-slate-500">Scheduled 12-hour cronjob (0 */12 * * *) + 7-day auto cleanup</p>
                 </div>
               </div>
-              <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200">
-                Hourly Cron
+              <span className="text-[11px] font-bold text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-full border border-sky-200 flex items-center gap-1">
+                <Clock className="w-3 h-3" /> Every 12 Hours
               </span>
             </div>
 
             <div className="text-xs text-slate-600 space-y-1 mt-2">
               <div>Target Container: <strong className="font-mono">{backupInfo?.container || 'oracle-backups'}</strong></div>
-              <div>Retention: <span className="text-slate-800 font-medium">Compressed Gzip Archive (.sql.gz)</span></div>
-              <div>Status: <span className={backupInfo?.configured ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-medium'}>
+              <div>Retention Policy: <span className="text-slate-800 font-medium">Keep Last 7 Days (Auto-Purge Older)</span></div>
+              <div>Storage Status: <span className={backupInfo?.configured ? 'text-emerald-600 font-semibold' : 'text-amber-600 font-medium'}>
                 {backupInfo?.configured ? 'Azure Storage Account Connected ☁️' : 'Local Archive (Pending Azure ConnStr)'}
               </span></div>
             </div>
@@ -224,11 +241,14 @@ export default function SystemAdminModule({
           <div className="flex items-start gap-2.5">
             <CheckCircle2 className="w-5 h-5 text-sky-600 shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold">Database Backup Completed Successfully!</div>
+              <div className="font-bold">Database Backup & Retention Policy Completed Successfully!</div>
               <div className="text-sky-700 mt-0.5">
                 File: <code className="font-mono bg-sky-100/60 px-1 py-0.5 rounded">{lastBackupResult.filename}</code> ({lastBackupResult.sizeKb} KB)
                 {lastBackupResult.azureUpload?.container && (
                   <span> &bull; Streamed to Azure Storage Container: <strong>{lastBackupResult.azureUpload.container}</strong></span>
+                )}
+                {lastBackupResult.retentionPolicy && (
+                  <span> &bull; Retention applied: Purged {lastBackupResult.retentionPolicy.localPurged} local file(s), {lastBackupResult.retentionPolicy.cloudPurged} cloud blob(s).</span>
                 )}
               </div>
             </div>
