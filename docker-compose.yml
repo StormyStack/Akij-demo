@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  # ==========================================================
+  # 1. Oracle Database 23ai Free (Data Tier)
+  # ==========================================================
+  oracle-db:
+    image: gvenzl/oracle-free:slim
+    container_name: poc-oracle-db
+    restart: unless-stopped
+    ports:
+      - "1521:1521"
+    environment:
+      - ORACLE_PASSWORD=PocPassword123#
+      - APP_USER=poc_user
+      - APP_USER_PASSWORD=poc_password
+    volumes:
+      # Automatically executes SQL files in backend/sql upon container initialization
+      - ./backend/sql:/container-entrypoint-initdb.d:ro
+      - oracle-data:/opt/oracle/oradata
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "healthcheck.sh"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  # ==========================================================
+  # 2. Redis In-Memory Cache (Caching Tier)
+  # ==========================================================
+  redis:
+    image: redis:7-alpine
+    container_name: poc-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ==========================================================
+  # 3. Node.js Express REST API (Logic Tier)
+  # ==========================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: poc-backend-api
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - PORT=5000
+      - NODE_ENV=production
+      - ORACLE_USER=poc_user
+      - ORACLE_PASSWORD=poc_password
+      - ORACLE_CONNECT_STRING=oracle-db:1521/FREEPDB1
+      - REDIS_URL=redis://redis:6379
+      - CACHE_TTL_SECONDS=60
+    depends_on:
+      redis:
+        condition: service_healthy
+      oracle-db:
+        condition: service_started
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
+volumes:
+  oracle-data:
+    driver: local
+  redis-data:
+    driver: local
