@@ -4,13 +4,30 @@ const { getCache, setCache, invalidatePattern, flushAll } = require('../config/r
 // Normalizes row object keys from Oracle uppercase (ID, NAME, etc.) to lowercase
 function normalizeItem(row) {
   if (!row) return null;
+  const name = row.NAME !== undefined ? row.NAME : row.name;
+  let imageUrl = row.IMAGE_URL !== undefined ? row.IMAGE_URL : (row.image_url || null);
+
+  // Auto-link bakery images if image_url is missing
+  if (!imageUrl && name) {
+    const lower = name.toLowerCase();
+    if (lower.includes('croissant') || lower.includes('crs')) {
+      imageUrl = 'https://db2backup1.blob.core.windows.net/assets/Homemade-Croissants-1.jpg';
+    } else if (lower.includes('cheesecake') || lower.includes('chk') || lower.includes('burnt')) {
+      imageUrl = 'https://db2backup1.blob.core.windows.net/assets/brunt-cheesecake.jpg';
+    }
+  }
+
   return {
     id: row.ID !== undefined ? row.ID : row.id,
-    name: row.NAME !== undefined ? row.NAME : row.name,
+    name: name,
     sku: row.SKU !== undefined ? row.SKU : row.sku,
     category: row.CATEGORY !== undefined ? row.CATEGORY : row.category,
+    unit_of_measure: row.UNIT_OF_MEASURE !== undefined ? row.UNIT_OF_MEASURE : (row.unit_of_measure || 'PCS'),
+    cost_price: row.COST_PRICE !== undefined ? Number(row.COST_PRICE) : (row.cost_price !== undefined ? Number(row.cost_price) : 0),
     price: row.PRICE !== undefined ? Number(row.PRICE) : Number(row.price),
     stock_quantity: row.STOCK_QUANTITY !== undefined ? Number(row.STOCK_QUANTITY) : Number(row.stock_quantity),
+    reorder_level: row.REORDER_LEVEL !== undefined ? Number(row.REORDER_LEVEL) : (row.reorder_level || 10),
+    image_url: imageUrl,
     description: row.DESCRIPTION !== undefined ? row.DESCRIPTION : row.description,
     status: row.STATUS !== undefined ? row.STATUS : row.status,
     created_at: row.CREATED_AT !== undefined ? row.CREATED_AT : row.created_at,
@@ -121,7 +138,19 @@ async function getItemById(req, res) {
 
 // POST /api/items
 async function createItem(req, res) {
-  const { name, sku, category, price, stock_quantity = 0, description = '', status = 'ACTIVE' } = req.body;
+  const { 
+    name, 
+    sku, 
+    category, 
+    price, 
+    cost_price = 0, 
+    unit_of_measure = 'PCS', 
+    stock_quantity = 0, 
+    reorder_level = 10, 
+    image_url = null, 
+    description = '', 
+    status = 'ACTIVE' 
+  } = req.body;
 
   if (!name || !sku || !category || price === undefined) {
     return res.status(400).json({
@@ -155,7 +184,7 @@ async function createItem(req, res) {
 
     return res.status(201).json({
       success: true,
-      message: 'Item created successfully in Oracle DB',
+      message: 'Bakery item created successfully in Oracle DB',
       source: result.source || 'oracle_database',
       data: {
         id: createdId,
@@ -163,7 +192,11 @@ async function createItem(req, res) {
         sku: sku.toUpperCase(),
         category,
         price: parseFloat(price),
+        cost_price: parseFloat(cost_price) || 0,
+        unit_of_measure,
         stock_quantity: parseInt(stock_quantity, 10) || 0,
+        reorder_level: parseInt(reorder_level, 10) || 10,
+        image_url,
         description,
         status,
       },

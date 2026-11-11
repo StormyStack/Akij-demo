@@ -5,12 +5,13 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
-    category: 'Machinery',
+    category: 'Pastries & Viennoiserie',
     unit_of_measure: 'PCS',
     cost_price: '',
     price: '',
     stock_quantity: 25,
     reorder_level: 10,
+    image_url: '',
     description: '',
     status: 'ACTIVE',
   });
@@ -22,12 +23,13 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
       setFormData({
         name: item.name || '',
         sku: item.sku || '',
-        category: item.category || 'Machinery',
+        category: item.category || 'Pastries & Viennoiserie',
         unit_of_measure: item.unit_of_measure || 'PCS',
         cost_price: item.cost_price !== undefined ? item.cost_price : '',
         price: item.price !== undefined ? item.price : '',
         stock_quantity: item.stock_quantity !== undefined ? item.stock_quantity : 0,
         reorder_level: item.reorder_level !== undefined ? item.reorder_level : 10,
+        image_url: item.image_url || '',
         description: item.description || '',
         status: item.status || 'ACTIVE',
       });
@@ -35,13 +37,14 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
       const randomId = Math.floor(100 + Math.random() * 900);
       setFormData({
         name: '',
-        sku: `PRD-${randomId}`,
-        category: 'Machinery',
+        sku: `BAKE-${randomId}`,
+        category: 'Pastries & Viennoiserie',
         unit_of_measure: 'PCS',
         cost_price: '',
         price: '',
         stock_quantity: 50,
         reorder_level: 15,
+        image_url: '',
         description: '',
         status: 'ACTIVE',
       });
@@ -135,19 +138,19 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
 
             <div>
               <label className="block font-semibold text-slate-700 mb-1">
-                Product Category *
+                Bakery Category *
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
-                <option value="Machinery">Machinery & Equipment</option>
-                <option value="Packaging">Packaging & Boxes</option>
-                <option value="Raw Materials">Raw Materials & Resin</option>
-                <option value="Electronics">Industrial Electronics</option>
-                <option value="Tools">Tools & Calipers</option>
-                <option value="Furniture">Commercial Furniture</option>
+                <option value="Pastries & Viennoiserie">🥐 Pastries & Viennoiserie</option>
+                <option value="Cakes & Cheesecakes">🍰 Cakes & Cheesecakes</option>
+                <option value="Artisan Breads">🥖 Artisan Breads & Sourdough</option>
+                <option value="Bakery Ingredients">🧈 Bakery Ingredients (Butter/Flour)</option>
+                <option value="Packaging">📦 Bakery Packaging & Boxes</option>
+                <option value="Beverages">☕ Coffee & Beverages</option>
               </select>
             </div>
 
@@ -161,11 +164,12 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white"
               >
                 <option value="PCS">PCS (Pieces)</option>
-                <option value="UNIT">UNIT</option>
-                <option value="BAG">BAG (e.g. 25kg)</option>
-                <option value="BUNDLE">BUNDLE (500 pk)</option>
-                <option value="ROLL">ROLL</option>
+                <option value="SLICE">SLICE (Cake Slice)</option>
+                <option value="LOAF">LOAF (Bread Loaf)</option>
+                <option value="BOX">BOX (Pack / Display)</option>
                 <option value="KG">KG (Kilograms)</option>
+                <option value="BAG">BAG (e.g. 25kg/50kg)</option>
+                <option value="UNIT">UNIT</option>
               </select>
             </div>
 
@@ -228,11 +232,58 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
 
             <div className="sm:col-span-2">
               <label className="block font-semibold text-slate-700 mb-1">
-                Item Description / Technical Specifications
+                Product Image URL (Azure Blob Storage)
+              </label>
+              <div className="flex gap-2 items-center">
+                <input
+                  type="url"
+                  placeholder="https://db2backup1.blob.core.windows.net/assets/..."
+                  value={formData.image_url}
+                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
+                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-[11px]"
+                />
+                {formData.image_url && (
+                  <div className="w-9 h-9 rounded-lg border border-slate-300 overflow-hidden shrink-0 bg-slate-100">
+                    <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-medium">Quick Azure Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => setFormData({
+                    ...formData,
+                    name: formData.name || 'Artisan French Butter Croissant',
+                    category: 'Pastries & Viennoiserie',
+                    image_url: 'https://db2backup1.blob.core.windows.net/assets/Homemade-Croissants-1.jpg'
+                  })}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 font-medium transition-colors"
+                >
+                  🥐 Croissant
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFormData({
+                    ...formData,
+                    name: formData.name || 'Basque Burnt Cheesecake (Slice)',
+                    category: 'Cakes & Cheesecakes',
+                    image_url: 'https://db2backup1.blob.core.windows.net/assets/brunt-cheesecake.jpg'
+                  })}
+                  className="text-[10px] px-2 py-0.5 rounded-full bg-yellow-50 text-yellow-800 border border-yellow-200 hover:bg-yellow-100 font-medium transition-colors"
+                >
+                  🍰 Burnt Cheesecake
+                </button>
+              </div>
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block font-semibold text-slate-700 mb-1">
+                Item Description / Recipe Notes
               </label>
               <textarea
                 rows="2"
-                placeholder="Detailed specifications, manufacturer grade, technical properties..."
+                placeholder="Fresh ingredients, baking temperature, allergen warnings..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500"

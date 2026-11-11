@@ -20,35 +20,130 @@ let lastError = null;
 
 // Mock ERP Data for in-memory fallback
 let mockSuppliers = [
-  { ID: 1, NAME: 'Apex Industrial Supplies Ltd', CODE: 'SUP-001', CONTACT_PERSON: 'Rafiqul Islam', EMAIL: 'rafiqul@apexindustrial.com', PHONE: '+880-1711-223344', CITY: 'Dhaka', PAYMENT_TERMS: 'Net 30', STATUS: 'ACTIVE' },
-  { ID: 2, NAME: 'Pacific Global Tech Corp', CODE: 'SUP-002', CONTACT_PERSON: 'Tanvir Ahmed', EMAIL: 'tanvir@pacifictech.com', PHONE: '+880-1819-556677', CITY: 'Chittagong', PAYMENT_TERMS: 'Net 15', STATUS: 'ACTIVE' },
-  { ID: 3, NAME: 'Bengal Packaging & Plastics', CODE: 'SUP-003', CONTACT_PERSON: 'Farhana Yasmin', EMAIL: 'farhana@bengalpack.com', PHONE: '+880-1912-334455', CITY: 'Gazipur', PAYMENT_TERMS: 'Net 45', STATUS: 'ACTIVE' },
+  { ID: 1, NAME: 'Fonterra Dairy & Butter Imports Ltd', CODE: 'SUP-BTR-01', CONTACT_PERSON: 'Rafiqul Islam', EMAIL: 'dairy@fonterra-imports.com', PHONE: '+880-1711-223344', CITY: 'Dhaka', PAYMENT_TERMS: 'Net 30', STATUS: 'ACTIVE' },
+  { ID: 2, NAME: 'Puratos Gourmet Bakery Ingredients', CODE: 'SUP-ING-02', CONTACT_PERSON: 'Tanvir Ahmed', EMAIL: 'orders@puratos-bd.com', PHONE: '+880-1819-556677', CITY: 'Chittagong', PAYMENT_TERMS: 'Net 15', STATUS: 'ACTIVE' },
+  { ID: 3, NAME: 'City Flour Mills & Grains Group', CODE: 'SUP-FLR-03', CONTACT_PERSON: 'Farhana Yasmin', EMAIL: 'supply@cityflour.com', PHONE: '+880-1912-334455', CITY: 'Narayanganj', PAYMENT_TERMS: 'Net 45', STATUS: 'ACTIVE' },
 ];
 
 let mockCustomers = [
-  { ID: 1, NAME: 'Dhaka Logistics & Distribution', CUSTOMER_CODE: 'CUST-101', CONTACT_PERSON: 'Kamrul Hasan', EMAIL: 'kamrul@dhakalogistics.com', PHONE: '+880-1715-998877', CITY: 'Dhaka', CREDIT_LIMIT: 75000, STATUS: 'ACTIVE' },
-  { ID: 2, NAME: 'Meghna Retail Corporation', CUSTOMER_CODE: 'CUST-102', CONTACT_PERSON: 'Shahidul Alam', EMAIL: 'shahidul@meghnaretail.com', PHONE: '+880-1611-443322', CITY: 'Narayanganj', CREDIT_LIMIT: 120000, STATUS: 'ACTIVE' },
-  { ID: 3, NAME: 'Karnafuli Trading International', CUSTOMER_CODE: 'CUST-103', CONTACT_PERSON: 'Nasreen Sultana', EMAIL: 'nasreen@karnafulitrading.com', PHONE: '+880-1817-665544', CITY: 'Chittagong', CREDIT_LIMIT: 90000, STATUS: 'ACTIVE' },
+  { ID: 1, NAME: 'Artisan Cafe & Roastery (Banani)', CUSTOMER_CODE: 'CUST-BAKE-01', CONTACT_PERSON: 'Kamrul Hasan', EMAIL: 'orders@artisancafe.com', PHONE: '+880-1715-998877', CITY: 'Dhaka', CREDIT_LIMIT: 75000, STATUS: 'ACTIVE' },
+  { ID: 2, NAME: 'The Westin Hotel & Bakery Lounge', CUSTOMER_CODE: 'CUST-BAKE-02', CONTACT_PERSON: 'Shahidul Alam', EMAIL: 'pastry@westindhaka.com', PHONE: '+880-1611-443322', CITY: 'Dhaka', CREDIT_LIMIT: 150000, STATUS: 'ACTIVE' },
+  { ID: 3, NAME: 'North End Coffee & Bakery Outlets', CUSTOMER_CODE: 'CUST-BAKE-03', CONTACT_PERSON: 'Nasreen Sultana', EMAIL: 'procure@northendcoffee.com', PHONE: '+880-1817-665544', CITY: 'Chittagong', CREDIT_LIMIT: 95000, STATUS: 'ACTIVE' },
 ];
 
 let mockItems = [
-  { ID: 1, NAME: 'Heavy Duty Industrial Motor 5HP', SKU: 'PRD-MTR-5HP', CATEGORY: 'Machinery', UNIT_OF_MEASURE: 'UNIT', COST_PRICE: 450.00, PRICE: 680.00, STOCK_QUANTITY: 24, REORDER_LEVEL: 8, SUPPLIER_ID: 1, DESCRIPTION: 'Three-phase 5HP AC induction motor', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
-  { ID: 2, NAME: 'Corrugated Shipping Cartons (500 Pack)', SKU: 'PRD-BOX-500', CATEGORY: 'Packaging', UNIT_OF_MEASURE: 'BUNDLE', COST_PRICE: 120.00, PRICE: 185.00, STOCK_QUANTITY: 150, REORDER_LEVEL: 40, SUPPLIER_ID: 3, DESCRIPTION: 'Heavy duty 5-ply export quality packaging boxes', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
-  { ID: 3, NAME: 'Enterprise Ethernet Switch 48-Port PoE', SKU: 'PRD-NET-SW48', CATEGORY: 'Electronics', UNIT_OF_MEASURE: 'UNIT', COST_PRICE: 820.00, PRICE: 1250.00, STOCK_QUANTITY: 12, REORDER_LEVEL: 5, SUPPLIER_ID: 2, DESCRIPTION: 'Managed Gigabit PoE+ switch with 4x 10G SFP+', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
-  { ID: 4, NAME: 'Polypropylene Pellet Raw Resin (25kg)', SKU: 'PRD-RSN-PP25', CATEGORY: 'Raw Materials', UNIT_OF_MEASURE: 'BAG', COST_PRICE: 38.00, PRICE: 56.50, STOCK_QUANTITY: 4, REORDER_LEVEL: 25, SUPPLIER_ID: 3, DESCRIPTION: 'Virgin grade injection molding polypropylene resin', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
-  { ID: 5, NAME: 'Precision Digital Caliper 150mm', SKU: 'PRD-TLS-CALP', CATEGORY: 'Tools', UNIT_OF_MEASURE: 'PCS', COST_PRICE: 28.00, PRICE: 48.00, STOCK_QUANTITY: 65, REORDER_LEVEL: 15, SUPPLIER_ID: 1, DESCRIPTION: 'Stainless steel IP54 electronic vernier caliper', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
-  { ID: 6, NAME: 'Thermal Barcode Label Roll (1000 Labels)', SKU: 'PRD-LBL-1000', CATEGORY: 'Packaging', UNIT_OF_MEASURE: 'ROLL', COST_PRICE: 6.50, PRICE: 12.00, STOCK_QUANTITY: 3, REORDER_LEVEL: 20, SUPPLIER_ID: 3, DESCRIPTION: 'Direct thermal self-adhesive logistics labels', STATUS: 'ACTIVE', CREATED_AT: new Date(), UPDATED_AT: new Date() },
+  { 
+    ID: 1, 
+    NAME: 'Artisan French Butter Croissant', 
+    SKU: 'BAKE-CRS-001', 
+    CATEGORY: 'Pastries & Viennoiserie', 
+    UNIT_OF_MEASURE: 'PCS', 
+    COST_PRICE: 1.20, 
+    PRICE: 3.50, 
+    STOCK_QUANTITY: 85, 
+    REORDER_LEVEL: 20, 
+    SUPPLIER_ID: 1, 
+    IMAGE_URL: 'https://db2backup1.blob.core.windows.net/assets/Homemade-Croissants-1.jpg',
+    DESCRIPTION: 'Freshly baked flaky artisan butter croissants with honeycomb interior', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
+  { 
+    ID: 2, 
+    NAME: 'Spanish Basque Burnt Cheesecake', 
+    SKU: 'BAKE-CHK-002', 
+    CATEGORY: 'Cakes & Cheesecakes', 
+    UNIT_OF_MEASURE: 'SLICE', 
+    COST_PRICE: 4.50, 
+    PRICE: 8.50, 
+    STOCK_QUANTITY: 34, 
+    REORDER_LEVEL: 10, 
+    SUPPLIER_ID: 2, 
+    IMAGE_URL: 'https://db2backup1.blob.core.windows.net/assets/brunt-cheesecake.jpg',
+    DESCRIPTION: 'Caramelized top Basque style creamy burnt cheesecake with rich custard core', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
+  { 
+    ID: 3, 
+    NAME: 'Sourdough Country Boule (800g)', 
+    SKU: 'BAKE-BRD-003', 
+    CATEGORY: 'Artisan Breads', 
+    UNIT_OF_MEASURE: 'LOAF', 
+    COST_PRICE: 1.80, 
+    PRICE: 4.50, 
+    STOCK_QUANTITY: 28, 
+    REORDER_LEVEL: 8, 
+    SUPPLIER_ID: 3, 
+    IMAGE_URL: null,
+    DESCRIPTION: 'Slow-fermented wild yeast rustic sourdough loaf with blistered crispy crust', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
+  { 
+    ID: 4, 
+    NAME: 'Imported Unsalted Butter (25kg)', 
+    SKU: 'RAW-BTR-25KG', 
+    CATEGORY: 'Bakery Ingredients', 
+    UNIT_OF_MEASURE: 'BLOCK', 
+    COST_PRICE: 180.00, 
+    PRICE: 240.00, 
+    STOCK_QUANTITY: 5, 
+    REORDER_LEVEL: 15, 
+    SUPPLIER_ID: 1, 
+    IMAGE_URL: null,
+    DESCRIPTION: '82% butterfat European grade unsalted butter for pastry lamination', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
+  { 
+    ID: 5, 
+    NAME: 'High-Protein Bread Flour (50kg)', 
+    SKU: 'RAW-FLR-50KG', 
+    CATEGORY: 'Bakery Ingredients', 
+    UNIT_OF_MEASURE: 'BAG', 
+    COST_PRICE: 28.00, 
+    PRICE: 42.00, 
+    STOCK_QUANTITY: 45, 
+    REORDER_LEVEL: 20, 
+    SUPPLIER_ID: 3, 
+    IMAGE_URL: null,
+    DESCRIPTION: '13.5% protein unbleached wheat flour for sourdough and croissants', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
+  { 
+    ID: 6, 
+    NAME: 'Kraft Windowed Pastry Box (100 Pcs)', 
+    SKU: 'PKG-BOX-100', 
+    CATEGORY: 'Packaging', 
+    UNIT_OF_MEASURE: 'PACK', 
+    COST_PRICE: 12.00, 
+    PRICE: 22.00, 
+    STOCK_QUANTITY: 4, 
+    REORDER_LEVEL: 15, 
+    SUPPLIER_ID: 2, 
+    IMAGE_URL: null,
+    DESCRIPTION: 'Eco-friendly biodegradable bakery packaging with transparent PLA window', 
+    STATUS: 'ACTIVE', 
+    CREATED_AT: new Date(), 
+    UPDATED_AT: new Date() 
+  },
 ];
 
 let mockOrders = [
-  { ID: 1, ORDER_NUMBER: 'SO-2026-001', CUSTOMER_ID: 1, CUSTOMER_NAME: 'Dhaka Logistics & Distribution', ORDER_DATE: new Date(Date.now() - 5 * 86400000), DUE_DATE: new Date(Date.now() + 10 * 86400000), TOTAL_AMOUNT: 4260.00, STATUS: 'APPROVED', PAYMENT_STATUS: 'PAID', NOTES: 'Priority dispatch for warehouse expansion' },
-  { ID: 2, ORDER_NUMBER: 'SO-2026-002', CUSTOMER_ID: 2, CUSTOMER_NAME: 'Meghna Retail Corporation', ORDER_DATE: new Date(Date.now() - 2 * 86400000), DUE_DATE: new Date(Date.now() + 7 * 86400000), TOTAL_AMOUNT: 7400.00, STATUS: 'PROCESSING', PAYMENT_STATUS: 'PARTIAL', NOTES: 'Partial payment received. Awaiting dispatch' },
-  { ID: 3, ORDER_NUMBER: 'SO-2026-003', CUSTOMER_ID: 3, CUSTOMER_NAME: 'Karnafuli Trading International', ORDER_DATE: new Date(Date.now() - 1 * 86400000), DUE_DATE: new Date(Date.now() + 14 * 86400000), TOTAL_AMOUNT: 2500.00, STATUS: 'PENDING', PAYMENT_STATUS: 'UNPAID', NOTES: 'New purchase requisition submitted' },
-  { ID: 4, ORDER_NUMBER: 'SO-2026-004', CUSTOMER_ID: 1, CUSTOMER_NAME: 'Dhaka Logistics & Distribution', ORDER_DATE: new Date(Date.now() - 12 * 86400000), DUE_DATE: new Date(Date.now() - 2 * 86400000), TOTAL_AMOUNT: 11250.00, STATUS: 'COMPLETED', PAYMENT_STATUS: 'PAID', NOTES: 'Fulfilled and signed on delivery' },
+  { ID: 1, ORDER_NUMBER: 'SO-2026-001', CUSTOMER_ID: 1, CUSTOMER_NAME: 'Artisan Cafe & Roastery', ORDER_DATE: new Date(Date.now() - 5 * 86400000), DUE_DATE: new Date(Date.now() + 10 * 86400000), TOTAL_AMOUNT: 350.00, STATUS: 'APPROVED', PAYMENT_STATUS: 'PAID', NOTES: 'Morning daily delivery batch (60 croissants + 10 cheesecakes)' },
+  { ID: 2, ORDER_NUMBER: 'SO-2026-002', CUSTOMER_ID: 2, CUSTOMER_NAME: 'The Westin Hotel & Bakery Lounge', ORDER_DATE: new Date(Date.now() - 2 * 86400000), DUE_DATE: new Date(Date.now() + 7 * 86400000), TOTAL_AMOUNT: 680.00, STATUS: 'PROCESSING', PAYMENT_STATUS: 'PARTIAL', NOTES: 'Banquet dessert catering order' },
+  { ID: 3, ORDER_NUMBER: 'SO-2026-003', CUSTOMER_ID: 3, CUSTOMER_NAME: 'North End Coffee & Bakery Outlets', ORDER_DATE: new Date(Date.now() - 1 * 86400000), DUE_DATE: new Date(Date.now() + 14 * 86400000), TOTAL_AMOUNT: 450.00, STATUS: 'PENDING', PAYMENT_STATUS: 'UNPAID', NOTES: 'Weekly stock replenishment' },
 ];
 
 let mockNextItemId = 7;
-let mockNextOrderId = 5;
+let mockNextOrderId = 4;
 
 const { runInitScripts } = require('../scripts/initDb');
 

@@ -9,7 +9,8 @@ import {
   Clock, 
   Truck, 
   Plus, 
-  ExternalLink 
+  ExternalLink,
+  Sparkles 
 } from 'lucide-react';
 
 export default function ErpDashboard({ 
@@ -129,6 +130,102 @@ export default function ErpDashboard({
           <div className="text-2xl font-bold text-slate-900">{summary.lowStockCount} Items</div>
           <div className={`text-[11px] font-medium mt-1 ${summary.lowStockCount > 0 ? 'text-amber-700' : 'text-slate-500'}`}>
             {summary.lowStockCount > 0 ? 'Urgent purchase requisitions needed' : 'All stock levels healthy'}
+          </div>
+        </div>
+      </div>
+
+      {/* Featured Bakery Creations streamed from Azure Blob Storage */}
+      <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-amber-500/10 border border-amber-200/80 rounded-2xl p-5 shadow-xs">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 bg-amber-500 text-white rounded-xl shadow-xs">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">Featured Bakery Creations</h2>
+              <p className="text-xs text-slate-500">Live static assets served directly from Azure Blob Storage (<code>db2backup1</code>)</p>
+            </div>
+          </div>
+          <button
+            onClick={() => onNavigate('inventory')}
+            className="text-xs font-semibold text-amber-800 hover:text-amber-900 bg-amber-100/70 hover:bg-amber-200/70 px-3 py-1.5 rounded-lg transition-colors inline-flex items-center gap-1"
+          >
+            <span>View Full Catalog</span>
+            <ExternalLink className="w-3 h-3" />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Card 1: Croissant */}
+          <div className="bg-white rounded-xl p-4 border border-amber-200/60 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow group">
+            <div className="relative w-24 h-24 rounded-lg overflow-hidden shrink-0 border border-amber-100 shadow-2xs">
+              <img 
+                src="https://db2backup1.blob.core.windows.net/assets/Homemade-Croissants-1.jpg" 
+                alt="Artisan French Butter Croissant"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                loading="lazy"
+              />
+              <span className="absolute top-1 right-1 text-[9px] bg-amber-600/90 text-white font-bold px-1.5 py-0.5 rounded shadow-xs">
+                Fresh Batch
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-amber-700 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                  Pastries & Viennoiserie
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-900">$3.50 / pc</span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mt-1 truncate">Artisan Butter Croissant</h3>
+              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">Layered French laminated dough with 82% European butter.</p>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px]">
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 85 In Stock
+                </span>
+                <button
+                  onClick={() => onQuickAction('order')}
+                  className="text-amber-800 font-bold hover:underline"
+                >
+                  Create Order &rarr;
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Card 2: Burnt Cheesecake */}
+          <div className="bg-white rounded-xl p-4 border border-amber-200/60 shadow-xs flex items-center gap-4 hover:shadow-md transition-shadow group">
+            <div className="relative w-24 h-24 rounded-lg overflow-hidden shrink-0 border border-amber-100 shadow-2xs">
+              <img 
+                src="https://db2backup1.blob.core.windows.net/assets/brunt-cheesecake.jpg" 
+                alt="Spanish Basque Burnt Cheesecake"
+                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                loading="lazy"
+              />
+              <span className="absolute top-1 right-1 text-[9px] bg-orange-600/90 text-white font-bold px-1.5 py-0.5 rounded shadow-xs">
+                Chef Specialty
+              </span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-md border border-orange-200">
+                  Cakes & Cheesecakes
+                </span>
+                <span className="font-mono text-xs font-bold text-slate-900">$8.50 / slice</span>
+              </div>
+              <h3 className="text-sm font-bold text-slate-900 mt-1 truncate">Basque Burnt Cheesecake</h3>
+              <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">Caramelized exterior with rich, custard-soft molten center.</p>
+              <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 text-[11px]">
+                <span className="text-emerald-700 font-semibold flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> 34 Slices In Stock
+                </span>
+                <button
+                  onClick={() => onQuickAction('order')}
+                  className="text-amber-800 font-bold hover:underline"
+                >
+                  Create Order &rarr;
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

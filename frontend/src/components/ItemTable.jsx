@@ -13,7 +13,26 @@ export default function ItemTable({
   onEdit,
   onDelete,
 }) {
-  const categories = ['All', 'Machinery', 'Packaging', 'Raw Materials', 'Electronics', 'Tools', 'Accessories', 'Furniture'];
+  const categories = [
+    'All',
+    'Pastries & Viennoiserie',
+    'Cakes & Cheesecakes',
+    'Artisan Breads',
+    'Bakery Ingredients',
+    'Packaging'
+  ];
+
+  const resolveItemImage = (item) => {
+    if (item.image_url) return item.image_url;
+    const lower = ((item.name || '') + ' ' + (item.sku || '')).toLowerCase();
+    if (lower.includes('croissant') || lower.includes('crs')) {
+      return 'https://db2backup1.blob.core.windows.net/assets/Homemade-Croissants-1.jpg';
+    }
+    if (lower.includes('cheesecake') || lower.includes('chk') || lower.includes('burnt')) {
+      return 'https://db2backup1.blob.core.windows.net/assets/brunt-cheesecake.jpg';
+    }
+    return null;
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
@@ -21,11 +40,11 @@ export default function ItemTable({
       <div className="p-5 border-b border-slate-200 bg-slate-50/50 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Package className="w-5 h-5 text-blue-600" />
-            <span>Product Master & Multi-Warehouse Stock Ledger</span>
+            <Package className="w-5 h-5 text-amber-600" />
+            <span>Bakery Product Master & Recipe Inventory Ledger</span>
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Active item catalog, cost valuation, unit of measure, and safety reorder thresholds
+            Fresh bakery specialties, artisan pastries, raw ingredients stock, and reorder levels
           </p>
         </div>
 
@@ -125,15 +144,34 @@ export default function ItemTable({
                 const price = Number(item.price || 0);
                 const margin = price > 0 ? (((price - cost) / price) * 100).toFixed(1) : 0;
                 const isLowStock = Number(item.stock_quantity || 0) <= Number(item.reorder_level || 10);
+                const itemImg = resolveItemImage(item);
 
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/80 transition-colors group">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{item.name}</div>
-                      <div className="text-[11px] font-mono text-blue-600 mt-0.5">{item.sku}</div>
-                      {item.description && (
-                        <div className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{item.description}</div>
-                      )}
+                    <td className="py-3 px-4">
+                      <div className="flex items-center gap-3">
+                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 shrink-0 shadow-2xs group-hover:border-amber-400 transition-colors">
+                          {itemImg ? (
+                            <img
+                              src={itemImg}
+                              alt={item.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-400 bg-slate-100">
+                              <Package className="w-5 h-5 text-slate-400" />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <div className="font-bold text-slate-900 group-hover:text-amber-700 transition-colors">{item.name}</div>
+                          <div className="text-[11px] font-mono text-blue-600 mt-0.5">{item.sku}</div>
+                          {item.description && (
+                            <div className="text-[11px] text-slate-400 line-clamp-1 mt-0.5">{item.description}</div>
+                          )}
+                        </div>
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
