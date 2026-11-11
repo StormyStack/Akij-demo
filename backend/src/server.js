@@ -10,6 +10,7 @@ const itemsRouter = require('./routes/items');
 const backupRouter = require('./routes/backup');
 const erpRouter = require('./routes/erp');
 const docsRouter = require('./routes/docs');
+const uploadRouter = require('./routes/upload');
 const { getBackupHistory } = require('./services/backupService');
 
 const app = express();
@@ -17,7 +18,8 @@ const PORT = process.env.PORT || 5000;
 
 // Middlewares
 app.use(cors({ origin: '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
+app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 app.use(morgan('dev'));
 
 // Seq Structured Request Logger Middleware
@@ -90,6 +92,7 @@ app.get('/api/health', async (req, res) => {
 app.use('/api/items', itemsRouter);
 app.use('/api/erp', erpRouter);
 app.use('/api/backup', backupRouter);
+app.use('/api/upload', uploadRouter);
 app.use('/docs', docsRouter);
 app.use('/api/docs', docsRouter);
 

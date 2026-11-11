@@ -365,6 +365,7 @@ export default function App() {
         }}
         onSave={handleSaveItem}
         item={editingItem}
+        apiUrl={apiUrl}
       />
 
       <NewOrderModal

@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, Package } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Save, AlertCircle, Package, UploadCloud, CheckCircle2, Image as ImageIcon, RefreshCw, Trash2, Check } from 'lucide-react';
 
-export default function ItemModal({ isOpen, onClose, onSave, item }) {
+export default function ItemModal({ isOpen, onClose, onSave, item, apiUrl }) {
   const [formData, setFormData] = useState({
     name: '',
     sku: '',
@@ -17,6 +17,9 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     if (item) {
@@ -52,7 +55,66 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
     setError('');
   }, [item, isOpen]);
 
-  if (!isOpen) return null;
+  const handleFileUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      setUploadError('Please select a valid image file (PNG, JPG, WebP).');
+      return;
+    }
+
+    if (file.size > 15 * 1024 * 1024) {
+      setUploadError('Image size exceeds 15MB limit.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadError('');
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const base64Data = reader.result.split(',')[1];
+          const targetBase = (apiUrl || 'http://localhost:5000').replace(/\/+$/, '');
+
+          const res = await fetch(`${targetBase}/api/upload`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              filename: file.name,
+              contentType: file.type,
+              base64Data
+            })
+          });
+
+          if (!res.ok) {
+            const errData = await res.json().catch(() => ({}));
+            throw new Error(errData.message || `Server returned HTTP ${res.status}`);
+          }
+
+          const data = await res.json();
+          if (data.url) {
+            setFormData(prev => ({
+              ...prev,
+              image_url: data.url,
+              name: prev.name || file.name.replace(/\.[^/.]+$/, '').replace(/[_-]/g, ' ')
+            }));
+          }
+        } catch (uploadErr) {
+          console.error('Azure upload error:', uploadErr);
+          setUploadError(`Upload failed: ${uploadErr.message}`);
+        } finally {
+          setUploading(false);
+        }
+      };
+      reader.readAsDataURL(file);
+    } catch (err) {
+      setUploadError(err.message);
+      setUploading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -232,24 +294,99 @@ export default function ItemModal({ isOpen, onClose, onSave, item }) {
 
             <div className="sm:col-span-2">
               <label className="block font-semibold text-slate-700 mb-1">
-                Product Image URL (Azure Blob Storage)
+                Product Image (Upload to Azure Blob Storage)
               </label>
-              <div className="flex gap-2 items-center">
-                <input
-                  type="url"
-                  placeholder="https://db2backup1.blob.core.windows.net/assets/..."
-                  value={formData.image_url}
-                  onChange={(e) => setFormData({ ...formData, image_url: e.target.value })}
-                  className="flex-1 px-3 py-2 border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 font-mono text-[11px]"
-                />
-                {formData.image_url && (
-                  <div className="w-9 h-9 rounded-lg border border-slate-300 overflow-hidden shrink-0 bg-slate-100">
-                    <img src={formData.image_url} alt="Preview" className="w-full h-full object-cover" />
+
+              {/* Hidden File Input */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                onChange={handleFileUpload}
+                className="hidden"
+              />
+
+              {uploadError && (
+                <div className="mb-2 p-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span className="flex-1">{uploadError}</span>
+                  <button
+                    type="button"
+                    onClick={() => setUploadError('')}
+                    className="text-red-400 hover:text-red-600"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+
+              {uploading ? (
+                <div className="p-6 border-2 border-dashed border-blue-300 rounded-xl bg-blue-50/50 flex flex-col items-center justify-center text-center">
+                  <RefreshCw className="w-8 h-8 text-blue-600 animate-spin mb-2" />
+                  <p className="text-xs font-semibold text-blue-900">Uploading file directly to Azure Blob Storage...</p>
+                  <p className="text-[11px] text-blue-600 mt-0.5">Container: db2backup1 / assets</p>
+                </div>
+              ) : formData.image_url ? (
+                <div className="p-3 border border-emerald-200 bg-emerald-50/30 rounded-xl flex items-start gap-3">
+                  <div className="w-16 h-16 rounded-lg border border-slate-200 overflow-hidden bg-white shrink-0 shadow-xs">
+                    <img
+                      src={formData.image_url}
+                      alt="Uploaded preview"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.style.display = 'none'; }}
+                    />
                   </div>
-                )}
-              </div>
-              <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                <span className="text-[10px] text-slate-400 font-medium">Quick Azure Presets:</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5 text-emerald-700 text-xs font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                      <span>Uploaded & Linked to Azure Blob</span>
+                    </div>
+                    <div className="mt-1 text-[11px] font-mono text-slate-600 truncate bg-white/70 px-2 py-1 rounded border border-slate-200">
+                      {formData.image_url}
+                    </div>
+                    <div className="flex items-center gap-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="text-xs font-medium text-blue-600 hover:text-blue-700 hover:underline flex items-center gap-1"
+                      >
+                        <UploadCloud className="w-3 h-3" />
+                        Replace Image
+                      </button>
+                      <span className="text-slate-300">•</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({ ...prev, image_url: '' }))}
+                        className="text-xs font-medium text-rose-600 hover:text-rose-700 hover:underline flex items-center gap-1"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                        Remove
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="group p-5 border-2 border-dashed border-slate-300 hover:border-blue-500 rounded-xl bg-slate-50 hover:bg-blue-50/30 transition-all cursor-pointer flex flex-col items-center justify-center text-center"
+                >
+                  <div className="w-10 h-10 rounded-full bg-blue-100 group-hover:bg-blue-200 text-blue-600 flex items-center justify-center mb-2 transition-colors">
+                    <UploadCloud className="w-5 h-5" />
+                  </div>
+                  <p className="text-xs font-semibold text-slate-700 group-hover:text-blue-600">
+                    Click to choose an image from your computer
+                  </p>
+                  <p className="text-[11px] text-slate-500 mt-0.5">
+                    File will automatically upload to Azure Blob Storage & link to this product
+                  </p>
+                  <span className="mt-2.5 inline-flex items-center gap-1 px-3 py-1 bg-white border border-slate-200 rounded-md text-[11px] font-medium text-slate-700 shadow-xs group-hover:border-blue-400 group-hover:text-blue-700">
+                    Browse File (PNG, JPG, WebP up to 15MB)
+                  </span>
+                </div>
+              )}
+
+              <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+                <span className="text-[10px] text-slate-400 font-medium">Or choose Azure preset:</span>
                 <button
                   type="button"
                   onClick={() => setFormData({
