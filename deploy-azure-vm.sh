@@ -2,13 +2,15 @@
 # ==========================================================
 # 3-Tier Enterprise PoC - Azure VM Provisioning Script
 # This script sets up Docker, Docker Compose, and starts
-# the Oracle DB + Redis + Backend API on Ubuntu/Debian Azure VM.
+# the Oracle DB + Redis + Seq + Backend API + DB Backup Cron
+# on an Ubuntu/Debian Azure VM.
 # ==========================================================
 
 set -e
 
 echo "=========================================================="
-echo "  Deploying 3-Tier Backend on Azure VM (Docker)"
+echo "  Deploying 3-Tier Stack on Azure VM (Docker)"
+echo "  Components: Oracle DB 23ai + Redis + Seq Logs + Backend + DB Backup Cron"
 echo "=========================================================="
 
 # 1. Update and install prerequisites
@@ -32,19 +34,26 @@ else
 fi
 
 # 3. Pull images and launch Docker Compose stack
-echo "[2/3] Building and starting containers (Oracle DB, Redis, Backend API)..."
+echo "[2/3] Building and starting all containers (Oracle DB, Redis, Seq, Backend, DB Backup)..."
 sudo docker compose up -d --build
 
 echo "[3/3] Checking container status..."
 sudo docker compose ps
 
+VM_IP=$(curl -s ifconfig.me || echo "AZURE_VM_PUBLIC_IP")
+
 echo "=========================================================="
 echo "  Deployment Complete! 🚀"
-echo "  - Backend REST API: http://$(curl -s ifconfig.me):5000"
-echo "  - Health Check:     http://$(curl -s ifconfig.me):5000/api/health"
+echo "  - Backend REST API: http://${VM_IP}:5000"
+echo "  - Health Check:     http://${VM_IP}:5000/api/health"
+echo "  - Seq Logs Web UI:  http://${VM_IP}:5341"
 echo "  - Oracle DB Port:   1521 (FREEPDB1)"
 echo "  - Redis Port:       6379"
+echo "  - DB Backup Cron:   Every 1 Hour (0 * * * *) to Azure Blob"
 echo "=========================================================="
 echo "IMPORTANT: In Azure Portal, ensure your VM Network Security Group (NSG)"
-echo "has Inbound Security Rules allowing Port 5000 (and 1521 if accessing DB remotely)."
+echo "Inbound Security Rules allow:"
+echo "  - Port 5000 (Backend API)"
+echo "  - Port 5341 (Seq Logging Web Dashboard)"
+echo "  - Port 1521 (Optional: Direct Oracle DB access)"
 echo "=========================================================="

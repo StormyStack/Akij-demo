@@ -5,7 +5,10 @@ require('dotenv').config();
 
 const { initOraclePool, getStatus: getDbStatus } = require('./config/db');
 const { initRedis, getStatus: getRedisStatus } = require('./config/redis');
+const logger = require('./config/logger');
 const itemsRouter = require('./routes/items');
+const backupRouter = require('./routes/backup');
+const { getBackupHistory } = require('./services/backupService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -15,10 +18,28 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 app.use(morgan('dev'));
 
+// Seq Structured Request Logger Middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.info(`HTTP {Method} {Url} returned {StatusCode} in {DurationMs}ms`, {
+      Method: req.method,
+      Url: req.originalUrl || req.url,
+      StatusCode: res.statusCode,
+      DurationMs: duration,
+      ClientIp: req.ip || req.headers['x-forwarded-for'] || '127.0.0.1',
+    });
+  });
+  next();
+});
+
 // System Health & Architecture Status Endpoint
 app.get('/api/health', async (req, res) => {
   const dbStatus = getDbStatus();
   const redisStatus = await getRedisStatus();
+  const seqStatus = logger.getStatus();
+  const backupStatus = getBackupHistory();
 
   res.json({
     status: 'OK',
@@ -43,6 +64,21 @@ app.get('/api/health', async (req, res) => {
           name: 'Redis Cache 7.x',
           ...redisStatus
         }
+      },
+      observability: {
+        seq: {
+          name: 'Seq Centralized Logging',
+          url: seqStatus.seqUrl,
+          connected: seqStatus.seqReachable,
+          mode: 'Structured CLEF Ingestion'
+        },
+        backup: {
+          name: 'Azure Blob Storage Backup Cron',
+          interval: 'Every 1 Hour (0 * * * *)',
+          container: backupStatus.container,
+          configured: backupStatus.configured,
+          totalBackups: backupStatus.totalBackups
+        }
       }
     }
   });
@@ -50,6 +86,7 @@ app.get('/api/health', async (req, res) => {
 
 // Mount Routes
 app.use('/api/items', itemsRouter);
+app.use('/api/backup', backupRouter);
 
 // Root greeting
 app.get('/', (req, res) => {

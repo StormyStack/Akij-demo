@@ -48,7 +48,25 @@ services:
       retries: 5
 
   # ==========================================================
-  # 3. Node.js Express REST API (Logic Tier)
+  # 3. Seq Centralized Structured Logging Server (Observability)
+  # ==========================================================
+  seq:
+    image: datalust/seq:latest
+    container_name: poc-seq-logs
+    restart: unless-stopped
+    ports:
+      # Port 5341 maps to Seq Web UI and HTTP event ingestion
+      - "5341:80"
+    environment:
+      - ACCEPT_EULA=Y
+      - SEQ_FIRSTRUN_NOAUTHENTICATION=true
+    volumes:
+      - seq-data:/data
+    networks:
+      - app-network
+
+  # ==========================================================
+  # 4. Node.js Express REST API (Logic Tier)
   # ==========================================================
   backend:
     build:
@@ -66,11 +84,40 @@ services:
       - ORACLE_CONNECT_STRING=oracle-db:1521/FREEPDB1
       - REDIS_URL=redis://redis:6379
       - CACHE_TTL_SECONDS=60
+      - SEQ_URL=http://seq:5341
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-oracle-backups}
     depends_on:
       redis:
         condition: service_healthy
       oracle-db:
         condition: service_started
+      seq:
+        condition: service_started
+    networks:
+      - app-network
+
+  # ==========================================================
+  # 5. Hourly Database Backup Cron to Azure Blob Storage
+  # ==========================================================
+  db-backup:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: poc-db-backup
+    restart: unless-stopped
+    command: ["node", "src/scripts/backupCron.js"]
+    environment:
+      - ORACLE_USER=poc_user
+      - ORACLE_PASSWORD=poc_password
+      - ORACLE_CONNECT_STRING=oracle-db:1521/FREEPDB1
+      - SEQ_URL=http://seq:5341
+      - AZURE_STORAGE_CONNECTION_STRING=${AZURE_STORAGE_CONNECTION_STRING:-}
+      - AZURE_STORAGE_CONTAINER_NAME=${AZURE_STORAGE_CONTAINER_NAME:-oracle-backups}
+      - BACKUP_CRON_SCHEDULE=0 * * * *
+    depends_on:
+      - oracle-db
+      - seq
     networks:
       - app-network
 
@@ -82,4 +129,6 @@ volumes:
   oracle-data:
     driver: local
   redis-data:
+    driver: local
+  seq-data:
     driver: local

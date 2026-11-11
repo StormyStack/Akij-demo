@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ArchitectureBar from './components/ArchitectureBar';
+import ObservabilityBar from './components/ObservabilityBar';
 import StatsCards from './components/StatsCards';
 import ItemTable from './components/ItemTable';
 import ItemModal from './components/ItemModal';
@@ -18,6 +19,8 @@ export default function App() {
   const [health, setHealth] = useState(null);
   const [lastQueryInfo, setLastQueryInfo] = useState(null);
   const [isFlushing, setIsFlushing] = useState(false);
+  const [isBackingUp, setIsBackingUp] = useState(false);
+  const [lastBackupResult, setLastBackupResult] = useState(null);
 
   // Modals
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
@@ -110,6 +113,25 @@ export default function App() {
     await fetchHealth();
   };
 
+  // Trigger On-Demand DB Backup to Azure Blob
+  const handleTriggerBackup = async () => {
+    try {
+      setIsBackingUp(true);
+      const res = await fetch(`${apiUrl}/api/backup/trigger`, { method: 'POST' });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setLastBackupResult(data.data);
+        await fetchHealth();
+      } else {
+        alert(`Backup warning: ${data.message || 'Operation failed'}`);
+      }
+    } catch (err) {
+      alert(`Backup error: ${err.message}`);
+    } finally {
+      setIsBackingUp(false);
+    }
+  };
+
   // Delete Item
   const handleDeleteItem = async (id) => {
     if (!window.confirm(`Are you sure you want to delete item #${id}?`)) return;
@@ -146,7 +168,7 @@ export default function App() {
                 </span>
               </div>
               <p className="text-xs text-slate-400">
-                Azure Static Web Apps • Node.js Backend • Oracle Database 23ai • Redis Cache
+                Azure Static Web Apps • Node.js Backend • Oracle Database 23ai • Redis Cache • Seq Logs
               </p>
             </div>
           </div>
@@ -170,6 +192,15 @@ export default function App() {
           isFlushing={isFlushing}
           onOpenConfig={() => setIsConfigModalOpen(true)}
           apiUrl={apiUrl}
+        />
+
+        {/* Observability: Seq Logging & Azure Blob DB Backup */}
+        <ObservabilityBar
+          health={health}
+          apiUrl={apiUrl}
+          onTriggerBackup={handleTriggerBackup}
+          isBackingUp={isBackingUp}
+          lastBackupResult={lastBackupResult}
         />
 
         {/* High-level KPI Cards */}

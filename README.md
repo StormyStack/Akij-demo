@@ -3,7 +3,8 @@
 A complete, production-ready **3-Tier Enterprise Application** designed for rapid Proof-of-Concept (PoC) deployment:
 - **Presentation Tier**: **React 18 (Vite + Tailwind CSS)** configured for **Azure Static Web Apps**
 - **Logic Tier**: **Node.js Express REST API** containerized with Docker for **Azure Virtual Machine (VM)**
-- **Data & Caching Tier**: **Oracle Database 23ai Free** + **Redis 7 Cache** running on the Azure VM via Docker Compose
+- **Data & Caching Tier**: **Oracle Database 23ai Free** + **Redis 7 Cache** running via Docker Compose
+- **Observability & Resilience**: **Seq Structured Logging Server** + **Hourly Cronjob DB Backup to Azure Blob Storage**
 
 ---
 
@@ -11,30 +12,36 @@ A complete, production-ready **3-Tier Enterprise Application** designed for rapi
 
 ```text
 Demo Application/
-├── docker-compose.yml           # Multi-container orchestration (Oracle DB + Redis + Backend)
+├── docker-compose.yml           # Multi-container orchestration (Oracle, Redis, Seq, Backend, DB Backup)
 ├── deploy-azure-vm.sh           # 1-Command setup script for Azure Linux VM
 ├── .gitignore
 ├── README.md
 │
-├── backend/                     # TIER 2 & TIER 3 (Logic & Database)
-│   ├── Dockerfile               # Production container for Express API
-│   ├── package.json             # Express, oracledb (Thin Mode), redis
+├── backend/                     # TIER 2 & TIER 3 (Logic, Database & Observability)
+│   ├── Dockerfile               # Production container for Express API & Backup Cron
+│   ├── package.json             # Express, oracledb, redis, @azure/storage-blob, node-cron
 │   ├── .env.example             # Environment configuration template
-│   ├── sql/                     # Oracle Database SQL Scripts
+│   ├── sql/                     # Oracle Database SQL Scripts (Auto-mounted into container)
 │   │   ├── 00_init_user.sql     # Optional: Oracle user & tablespace grant script
 │   │   ├── 01_schema.sql        # DDL: ITEMS table, constraints, trigger, indexes
 │   │   └── 02_seed_data.sql     # DML: Demo seed records
 │   └── src/
-│       ├── server.js            # Express server entrypoint & health checks
+│       ├── server.js            # Express server entrypoint & Seq request logger
 │       ├── config/
 │       │   ├── db.js            # Oracle DB connection pool (node-oracledb)
-│       │   └── redis.js         # Redis cache client & hit/miss metrics
+│       │   ├── redis.js         # Redis cache client & hit/miss metrics
+│       │   └── logger.js        # Seq structured logging client (CLEF format)
 │       ├── controllers/
 │       │   └── itemsController.js # CRUD operations + Redis caching logic
 │       ├── routes/
-│       │   └── items.js         # REST endpoints (/api/items)
+│       │   ├── items.js         # REST endpoints (/api/items)
+│       │   └── backup.js        # DB backup triggers & Seq status (/api/backup)
+│       ├── services/
+│       │   └── backupService.js # Oracle dump + Gzip compression + Azure Blob upload
 │       └── scripts/
-│           └── initDb.js        # Standalone node script to initialize Oracle schema
+│           ├── initDb.js        # Database table initialization script
+│           ├── backupCron.js    # Hourly cronjob scheduler (0 * * * *)
+│           └── backupRunner.js  # One-shot manual backup CLI
 │
 └── frontend/                    # TIER 1 (Presentation)
     ├── staticwebapp.config.json # Azure Static Web Apps configuration (routing & CORS)
@@ -47,6 +54,7 @@ Demo Application/
         ├── App.jsx              # Main UI with 3-tier tracer & live metrics
         ├── components/
         │   ├── ArchitectureBar.jsx # Visual 3-tier status & Redis Cache Flush button
+        │   ├── ObservabilityBar.jsx# Seq Logging status & Azure Blob backup trigger
         │   ├── StatsCards.jsx      # Inventory valuation & summary KPIs
         │   ├── ItemTable.jsx       # CRUD table with search & category filters
         │   ├── ItemModal.jsx       # Create / Edit modal dialog
@@ -56,9 +64,42 @@ Demo Application/
 
 ---
 
-## 🗄️ Oracle Database Scripts (`backend/sql/`)
+## 🔍 Seq Centralized Logging (`http://<VM_IP>:5341`)
 
-The SQL scripts in `backend/sql/` are automatically executed on first boot when mounted into the Oracle Free container (`/container-entrypoint-initdb.d`):
+Seq runs in Docker via the `datalust/seq:latest` image and provides a real-time web dashboard for structured log search, alerting, and analysis.
+
+- **Web Dashboard**: Access at `http://<AZURE_VM_PUBLIC_IP>:5341` (No authentication required by default in PoC mode).
+- **Log Stream Format**: Events are streamed asynchronously using the **CLEF (Compact Log Event Format)** standard.
+- **Captured Events**:
+  - HTTP requests with method, path, response status, and duration in ms.
+  - Oracle DB pool connection and query execution times.
+  - Redis cache hits vs. cache misses.
+  - Hourly database backup start, compression size (KB), and Azure Blob Storage upload status.
+
+---
+
+## ☁️ Azure Storage Account (Blob Storage) DB Backup
+
+### How it works
+1. **Cronjob Schedule**: Runs **every 1 hour** (`0 * * * *`) via the `db-backup` container.
+2. **Export & Compression**: Connects to Oracle DB, exports schema DDL + table rows, and compresses the dump into `oracle_backup_YYYY-MM-DDTHH-mm-ss.sql.gz` using Gzip.
+3. **Upload to Azure Blob**: Directly uploads the compressed archive to your Azure Storage Account Blob container (default: `oracle-backups`).
+4. **Seq Audit Trail**: Emits structured log events to Seq with backup size, row counts, and Azure blob URLs.
+5. **On-Demand Trigger**: You can run an instant backup at any time by clicking **"Run Backup Now"** in the frontend UI or by calling `POST /api/backup/trigger`.
+
+### Configuring your Azure Storage Account
+In `backend/.env` (or via Azure VM environment variables):
+```env
+# Azure Storage Account Connection String
+# Found in: Azure Portal > Storage Account > Security + networking > Access keys > Connection string
+AZURE_STORAGE_CONNECTION_STRING="DefaultEndpointsProtocol=https;AccountName=<YOUR_STORAGE_ACCOUNT>;AccountKey=<YOUR_ACCESS_KEY>;EndpointSuffix=core.windows.net"
+AZURE_STORAGE_CONTAINER_NAME="oracle-backups"
+BACKUP_CRON_SCHEDULE="0 * * * *"
+```
+
+---
+
+## 🗄️ Oracle Database Scripts (`backend/sql/`)
 
 | File | Purpose |
 | :--- | :--- |
@@ -66,41 +107,29 @@ The SQL scripts in `backend/sql/` are automatically executed on first boot when 
 | `01_schema.sql` | Creates `ITEMS` table with identity primary key, checks, triggers, and indexes |
 | `02_seed_data.sql` | Inserts rich starter items (Electronics, Peripherals, Furniture, Computers) |
 
-### Table Schema (`ITEMS`)
-- `id` (NUMBER GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY)
-- `name` (VARCHAR2(150) NOT NULL)
-- `sku` (VARCHAR2(50) UNIQUE NOT NULL)
-- `category` (VARCHAR2(100) NOT NULL)
-- `price` (NUMBER(10, 2) NOT NULL)
-- `stock_quantity` (NUMBER(8) DEFAULT 0)
-- `description` (VARCHAR2(500))
-- `status` ('ACTIVE', 'INACTIVE', 'OUT_OF_STOCK')
-- `created_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP)
-- `updated_at` (TIMESTAMP DEFAULT CURRENT_TIMESTAMP - auto-managed by trigger)
+The scripts are automatically executed when mounted into the Oracle Free container (`/container-entrypoint-initdb.d:ro`).
 
 ---
 
-## ⚡ Redis Caching Architecture
+## ⚡ Redis Caching Layer
 
-1. **Read-Through Cache**:
-   - `GET /api/items`: Checks Redis first (`items:list:...`).
-   - If **Cache HIT**: Returns result in `< 5ms` with header/payload tag `source: "redis_cache"`.
-   - If **Cache MISS**: Queries Oracle DB via `node-oracledb`, caches result in Redis (60-second TTL), and returns data with `source: "oracle_database"`.
-2. **Cache Invalidation**:
-   - Creating (`POST`), Updating (`PUT`), or Deleting (`DELETE`) an item automatically purges keys prefixed with `items:*`.
-3. **Interactive Visualizer**:
-   - The frontend UI includes a **"Flush Redis Cache"** button so you can visibly demonstrate the difference between a direct Oracle DB query (~50-100ms) and a Redis cache hit (<5ms).
+- **Cache-Aside Pattern**: `GET /api/items` queries Redis first (`items:list:...`).
+  - **Hit**: Returns cached JSON in `< 5ms` with `source: "redis_cache"`.
+  - **Miss**: Queries Oracle DB (~50-100ms), sets Redis cache with a 60-second TTL, and returns `source: "oracle_database"`.
+- **Automatic Invalidation**: Creating, updating, or deleting items invalidates all `items:*` Redis keys.
+- **Interactive Flush Button**: The frontend header provides a **"Flush Redis Cache"** button to demonstrate cache miss vs cache hit latency directly during PoC demos.
 
 ---
 
-## ☁️ Deployment Guide: Azure VM (Backend, Oracle DB, Redis)
+## 🚀 Deployment Guide: Azure VM (Backend, Oracle DB, Redis, Seq, Backup)
 
 ### Step 1: Create an Azure Linux VM
 - **Image**: Ubuntu Server 22.04 LTS or 24.04 LTS
-- **Size**: Recommended `Standard_B2s` (2 vCPUs, 4 GiB RAM) or `Standard_D2s_v5` (2 vCPUs, 8 GiB RAM for smooth Oracle DB Free operation)
+- **Size**: Recommended `Standard_B2s` (2 vCPUs, 4 GiB RAM) or `Standard_D2s_v5` (2 vCPUs, 8 GiB RAM)
 - **Networking**: In Azure Portal > Your VM > **Networking** > **Network Security Group (NSG)**:
-  - Add Inbound Port Rule for **Port 5000** (Destination port: `5000`, Protocol: `TCP`, Action: `Allow`)
-  - Optional: Allow **Port 1521** if you wish to connect directly to Oracle DB using DBeaver or SQL Developer from your local PC.
+  - Allow **Port 5000** (Backend API)
+  - Allow **Port 5341** (Seq Logging Dashboard)
+  - Optional: Allow **Port 1521** (Direct Oracle DB access from DBeaver / SQL Developer)
 
 ### Step 2: Deploy Containers to the Azure VM
 SSH into your Azure VM:
@@ -114,14 +143,26 @@ git clone <YOUR_REPO_URL> demo-app
 cd demo-app
 ```
 
+Add your Azure Storage connection string to `backend/.env`:
+```bash
+nano backend/.env
+# Set AZURE_STORAGE_CONNECTION_STRING="your_connection_string"
+```
+
 Run the automated provisioning script:
 ```bash
 chmod +x deploy-azure-vm.sh
 ./deploy-azure-vm.sh
 ```
-*(Or simply run `sudo docker compose up -d --build`)*
 
-Verify everything is running:
+All 5 services will start:
+1. `poc-oracle-db` (Oracle Database 23ai Free)
+2. `poc-redis` (Redis Cache 7 Alpine)
+3. `poc-seq-logs` (Seq Log Server on port 5341)
+4. `poc-backend-api` (Express REST API on port 5000)
+5. `poc-db-backup` (Hourly Azure Blob DB Backup Cron)
+
+Verify:
 ```bash
 sudo docker compose ps
 curl http://localhost:5000/api/health
@@ -131,57 +172,29 @@ curl http://localhost:5000/api/health
 
 ## 🌐 Deployment Guide: Azure Static Web Apps (Frontend)
 
-### Option A: Via Azure Portal (Recommended)
 1. In the **Azure Portal**, search for **Static Web Apps** and click **Create**.
-2. Select your Subscription and Resource Group.
-3. Choose **GitHub** as the deployment source and authorize your repository.
-4. Under **Build Details**:
-   - **Build Presets**: `Vite`
+2. Select Subscription, Resource Group, and link your **GitHub** repo.
+3. Under **Build Details**:
+   - **Build Preset**: `Vite`
    - **App location**: `/frontend`
    - **Api location**: *(leave empty)*
    - **Output location**: `dist`
-5. Click **Review + Create**.
-6. Once deployed, in the Static Web App overview, go to **Environment variables** (or **Configuration**) and add:
+4. In the deployed Static Web App **Configuration**, add:
    - `VITE_API_URL` = `http://<AZURE_VM_PUBLIC_IP>:5000`
-
-### Option B: In-Browser Endpoint Switching
-The frontend has a built-in **"API Config"** modal dialog. You can open the deployed Azure Static Web App URL in any browser, click **"API Config"**, and paste `http://<AZURE_VM_PUBLIC_IP>:5000` with instant "Test Connection" verification!
+5. *Alternatively*, open your deployed Static Web App URL in any browser, click **"API Config"**, and paste `http://<AZURE_VM_PUBLIC_IP>:5000`.
 
 ---
 
-## 💻 Local Development (Quick Start)
+## 📡 API Reference
 
-### 1. Start Oracle DB & Redis with Docker Compose
-```bash
-docker compose up -d oracle-db redis
-```
-
-### 2. Start the Backend API
-```bash
-cd backend
-npm install
-npm run dev
-```
-Backend runs on [http://localhost:5000](http://localhost:5000).
-
-### 3. Start the Frontend
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-Frontend runs on [http://localhost:5173](http://localhost:5173).
-
----
-
-## 📡 REST API Reference
-
-| Method | Endpoint | Description | Cache Behavior |
-| :--- | :--- | :--- | :--- |
-| `GET` | `/api/health` | System health for 3 tiers (Oracle, Redis, API) | Direct |
-| `GET` | `/api/items` | List items (with query filters `search`, `category`) | Read from Redis, fallback to DB |
-| `GET` | `/api/items/:id` | Get single item by ID | Read from Redis, fallback to DB |
-| `POST` | `/api/items` | Create new item | Writes to Oracle DB, purges cache |
-| `PUT` | `/api/items/:id` | Update item | Updates Oracle DB, purges cache |
-| `DELETE` | `/api/items/:id` | Delete item | Deletes from Oracle DB, purges cache |
-| `POST` | `/api/items/cache/flush` | Manually purge all Redis cached entries | Purges Redis keys |
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| `GET` | `/api/health` | System health for all tiers (Oracle, Redis, Seq, Backup) |
+| `GET` | `/api/items` | List items (with query filters `search`, `category`) |
+| `POST` | `/api/items` | Create new item (invalidates cache) |
+| `PUT` | `/api/items/:id` | Update item (invalidates cache) |
+| `DELETE` | `/api/items/:id` | Delete item (invalidates cache) |
+| `POST` | `/api/items/cache/flush` | Purge all Redis cached items |
+| `POST` | `/api/backup/trigger` | Trigger on-demand DB backup to Azure Blob Storage |
+| `GET` | `/api/backup/history` | List recent backup history & Azure container status |
+| `GET` | `/api/backup/seq-status` | Get Seq logging ingestion status |
