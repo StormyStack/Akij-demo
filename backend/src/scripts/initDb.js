@@ -24,6 +24,19 @@ async function runInitScripts() {
     const existingTables = (tablesCheck.rows || []).map(r => r[0] || r.TABLE_NAME);
     console.log(`[ERP DB Init] Existing tables found: ${existingTables.join(', ') || 'None'}`);
 
+    // Ensure items table has image_url column for Azure Blob assets
+    try {
+      await connection.execute(`
+        BEGIN
+          EXECUTE IMMEDIATE 'ALTER TABLE items ADD (image_url VARCHAR2(1000))';
+        EXCEPTION WHEN OTHERS THEN NULL;
+        END;
+      `);
+      console.log('[ERP DB Init] items.image_url column verified/added.');
+    } catch (colErr) {
+      console.warn('[ERP DB Init] Notice on items.image_url check:', colErr.message);
+    }
+
     if (existingTables.length < 4) {
       console.log('[ERP DB Init] Creating relational ERP schema...');
 
