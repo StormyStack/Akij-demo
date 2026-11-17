@@ -84,8 +84,19 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
   };
 
   const handleSave = () => {
-    onSaveUrl(url.replace(/\/+$/, ''));
+    let clean = (url || '').trim().replace(/\/+$/, '');
+    if (clean && !/^https?:\/\//i.test(clean)) {
+      clean = `http://${clean}`;
+    }
+    onSaveUrl(clean);
     onClose();
+  };
+
+  const handleResetToDefault = () => {
+    const defaultUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+    setUrl(defaultUrl);
+    localStorage.removeItem('AZURE_API_URL');
+    onSaveUrl(defaultUrl);
   };
 
   return (
@@ -150,6 +161,13 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
             >
               <RefreshCw className={`w-3.5 h-3.5 ${testing ? 'animate-spin text-blue-600' : ''}`} />
               {testing ? 'Pinging API...' : 'Test Connection'}
+            </button>
+            <button
+              type="button"
+              onClick={handleResetToDefault}
+              className="px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-lg transition-colors"
+            >
+              Reset to Build Default
             </button>
           </div>
 

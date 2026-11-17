@@ -15,7 +15,12 @@ import AzureConfigModal from './components/AzureConfigModal';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(() => {
-    return localStorage.getItem('AZURE_API_URL') || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    let raw = localStorage.getItem('AZURE_API_URL') || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    raw = (raw || '').trim().replace(/\/+$/, '');
+    if (raw && !/^https?:\/\//i.test(raw)) {
+      raw = `http://${raw}`;
+    }
+    return raw || 'http://localhost:5000';
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');

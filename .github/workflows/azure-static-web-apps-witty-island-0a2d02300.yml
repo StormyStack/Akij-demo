@@ -30,10 +30,19 @@ jobs:
 
       - name: Install dependencies and build Frontend
         working-directory: ./frontend
-        # 👇 THIS IS THE CRITICAL PART 👇
         env:
-          VITE_API_URL: ${{ vars.VITE_API_URL }}
+          VITE_API_URL: ${{ vars.VITE_API_URL || secrets.VITE_API_URL }}
         run: |
+          if [ -n "$VITE_API_URL" ]; then
+            # Prepend http:// if the user provided only an IP or host without protocol
+            if [[ ! "$VITE_API_URL" =~ ^https?:// ]]; then
+              VITE_API_URL="http://$VITE_API_URL"
+            fi
+            # Strip trailing slash
+            VITE_API_URL="${VITE_API_URL%/}"
+            echo "Injected VITE_API_URL into .env.production"
+            echo "VITE_API_URL=$VITE_API_URL" > .env.production
+          fi
           npm install
           npm run build
 
