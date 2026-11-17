@@ -2,7 +2,7 @@
   "$schema": "https://json.schemastore.org/staticwebapp.config.json",
   "navigationFallback": {
     "rewrite": "/index.html",
-    "exclude": ["/images/*.{png,jpg,gif,svg}", "/css/*"]
+    "exclude": ["/assets/*.{js,css}", "/images/*.{png,jpg,gif,svg}", "/css/*", "*.ico"]
   },
   "globalHeaders": {
     "Access-Control-Allow-Origin": "*",

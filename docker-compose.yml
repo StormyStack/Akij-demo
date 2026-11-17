@@ -2,25 +2,8 @@ version: '3.8'
 
 services:
   # ==========================================================
-  # 1. Nginx Reverse Proxy (Ingress Gateway)
-  # Matches the Architecture Diagram (Frontend -> Nginx -> Backend)
-  # ==========================================================
-  nginx:
-    image: nginx:alpine
-    container_name: poc-nginx-proxy
-    restart: unless-stopped
-    ports:
-      - "80:80"       # Only HTTP
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-      - seq
-    networks:
-      - app-network
-
-  # ==========================================================
-  # 2. Node.js Express REST API (Application / Logic Tier)
+  # 1. Node.js Express REST API (Application / Logic Tier)
+  # (Reverse Proxied by Host Machine Nginx on Port 80/443 -> Port 5000)
   # ==========================================================
   backend:
     build:

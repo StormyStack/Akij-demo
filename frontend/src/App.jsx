@@ -15,12 +15,17 @@ import AzureConfigModal from './components/AzureConfigModal';
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(() => {
-    let raw = localStorage.getItem('AZURE_API_URL') || import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const saved = localStorage.getItem('AZURE_API_URL');
+    // Clear legacy placeholder test IPs from browser storage
+    if (saved && (saved.includes('20.120.45.10') || saved.includes('20.40.58.159'))) {
+      localStorage.removeItem('AZURE_API_URL');
+    }
+    let raw = localStorage.getItem('AZURE_API_URL') || import.meta.env.VITE_API_URL || 'https://akij-erp.centralindia.cloudapp.azure.com';
     raw = (raw || '').trim().replace(/\/+$/, '');
     if (raw && !/^https?:\/\//i.test(raw)) {
-      raw = `http://${raw}`;
+      raw = `https://${raw}`;
     }
-    return raw || 'http://localhost:5000';
+    return raw || 'https://akij-erp.centralindia.cloudapp.azure.com';
   });
 
   const [activeTab, setActiveTab] = useState('dashboard');

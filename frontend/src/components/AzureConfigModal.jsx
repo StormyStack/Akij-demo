@@ -93,7 +93,7 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
   };
 
   const handleResetToDefault = () => {
-    const defaultUrl = (import.meta.env.VITE_API_URL || 'http://localhost:5000').trim().replace(/\/+$/, '');
+    const defaultUrl = (import.meta.env.VITE_API_URL || 'https://akij-erp.centralindia.cloudapp.azure.com').trim().replace(/\/+$/, '');
     setUrl(defaultUrl);
     localStorage.removeItem('AZURE_API_URL');
     onSaveUrl(defaultUrl);
@@ -128,7 +128,7 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
             </label>
             <input
               type="text"
-              placeholder="e.g. http://20.120.45.10:5000 or http://localhost:5000"
+              placeholder="e.g. https://akij-erp.centralindia.cloudapp.azure.com"
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               className="w-full px-3 py-2 text-xs font-mono border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
@@ -137,17 +137,17 @@ export default function AzureConfigModal({ isOpen, onClose, currentUrl, onSaveUr
               <span className="text-[10px] text-slate-400 font-medium">Quick suggestions:</span>
               <button
                 type="button"
-                onClick={() => setUrl('http://20.40.58.159:5000')}
+                onClick={() => setUrl('https://akij-erp.centralindia.cloudapp.azure.com')}
                 className="text-[10px] px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 hover:bg-blue-100 font-mono transition-colors"
               >
-                :5000 (Backend API)
+                HTTPS (Azure CloudApp)
               </button>
               <button
                 type="button"
-                onClick={() => setUrl('http://20.40.58.159')}
+                onClick={() => setUrl('http://akij-erp.centralindia.cloudapp.azure.com')}
                 className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 hover:bg-slate-200 font-mono transition-colors"
               >
-                :80 (Nginx Proxy)
+                HTTP (Port 80)
               </button>
             </div>
           </div>
