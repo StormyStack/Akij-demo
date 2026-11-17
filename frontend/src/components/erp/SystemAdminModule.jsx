@@ -27,11 +27,14 @@ export default function SystemAdminModule({
 }) {
   const getSeqUrl = () => {
     try {
-      const parsed = new URL(apiUrl || 'http://localhost:5000');
-      parsed.port = '5341';
-      return parsed.origin;
+      const cleanApi = (apiUrl || 'https://akij-erp.centralindia.cloudapp.azure.com').trim().replace(/\/+$/, '');
+      const parsed = new URL(cleanApi);
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return `${parsed.protocol}//${parsed.hostname}:5341`;
+      }
+      return `${parsed.origin}/seq/`;
     } catch {
-      return 'http://localhost:5341';
+      return 'https://akij-erp.centralindia.cloudapp.azure.com/seq/';
     }
   };
 
@@ -171,7 +174,7 @@ export default function SystemAdminModule({
                 </div>
               </div>
               <span className="text-[11px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-200">
-                Port 5341
+                /seq Ingress
               </span>
             </div>
 

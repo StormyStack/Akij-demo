@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { Activity, CloudUpload, ExternalLink, CheckCircle2, AlertTriangle, RefreshCw, HardDrive } from 'lucide-react';
 
 export default function ObservabilityBar({ health, apiUrl, onTriggerBackup, isBackingUp, lastBackupResult }) {
-  // Derive Seq URL from current API host: replace port 5000 with 5341
+  // Derive Seq URL: on Azure VM it is routed through /seq
   const getSeqUrl = () => {
     try {
-      const parsed = new URL(apiUrl || 'http://localhost:5000');
-      parsed.port = '5341';
-      return parsed.origin;
+      const cleanApi = (apiUrl || 'https://akij-erp.centralindia.cloudapp.azure.com').trim().replace(/\/+$/, '');
+      const parsed = new URL(cleanApi);
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        return `${parsed.protocol}//${parsed.hostname}:5341`;
+      }
+      return `${parsed.origin}/seq/`;
     } catch {
-      return 'http://localhost:5341';
+      return 'https://akij-erp.centralindia.cloudapp.azure.com/seq/';
     }
   };
 
@@ -65,7 +68,7 @@ export default function ObservabilityBar({ health, apiUrl, onTriggerBackup, isBa
               <span className="text-xs font-bold text-slate-800">Seq Structured Logging</span>
             </div>
             <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
-              <CheckCircle2 className="w-3 h-3" /> Port 5341 Active
+              <CheckCircle2 className="w-3 h-3" /> /seq Ingress Active
             </span>
           </div>
           <div className="text-xs text-slate-500 space-y-1">
